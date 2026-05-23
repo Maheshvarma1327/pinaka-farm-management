@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { useBreedingStore } from '../store/useBreedingStore';
 import { useSowStore } from '../store/useSowStore';
@@ -47,11 +47,34 @@ export default function BreedingRecord() {
     notes: ''
   });
 
+  const location = useLocation();
+  const locationState = location.state || {};
+
   useEffect(() => {
     fetchBreedings();
     fetchSows();
     fetchBoars();
   }, [fetchBreedings, fetchSows, fetchBoars]);
+
+  // Auto-open modal if navigated from Boar Record with a preselected boar
+  useEffect(() => {
+    if (locationState.openMating && locationState.preselectedBoarId && boars.length > 0 && sows.length > 0) {
+      setFormError('');
+      setFormData(prev => ({
+        ...prev,
+        sowId: eligibleSows.length > 0 ? eligibleSows[0]._id : (sows.length > 0 ? sows[0]._id : ''),
+        boarId: locationState.preselectedBoarId,
+        serviceDate: new Date().toISOString().split('T')[0],
+        matingType: 'Natural Mating',
+        operator: user?.name || '',
+        notes: `Initiated from Boar ${locationState.preselectedBoarNo} record.`
+      }));
+      setIsAddOpen(true);
+      // Clear the location state so re-renders don't re-open
+      window.history.replaceState({}, document.title);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationState.openMating, boars.length, sows.length]);
 
   // Eligible animals for form
   const eligibleSows = useMemo(() => {
@@ -68,10 +91,32 @@ export default function BreedingRecord() {
     );
   }, [boars]);
 
+  // Compute all active sows for boar-initiated breeding
+  const activeSows = useMemo(() => {
+    return sows.filter(s => s.status !== 'Dead' && s.status !== 'Culled' && s.status !== 'Sold' && s.pregnancyStatus !== 'Pregnant');
+  }, [sows]);
+
+  // Whether the modal was opened from a boar (pre-filled boar scenario)
+  const isBoarInitiated = !!(locationState.preselectedBoarId);
+
+  // For the form, determine which sow list to show
+  const sowsForForm = isBoarInitiated ? activeSows : eligibleSows;
+
+  const boarsForForm = useMemo(() => {
+    if (isBoarInitiated && locationState.preselectedBoarId) {
+      const preselected = boars.find(b => b._id === locationState.preselectedBoarId);
+      if (preselected) {
+        const filtered = eligibleBoars.filter(b => b._id !== preselected._id);
+        return [preselected, ...filtered];
+      }
+    }
+    return eligibleBoars;
+  }, [isBoarInitiated, locationState.preselectedBoarId, boars, eligibleBoars]);
+
   // Derived calculations for preview
   const selectedSowData = useMemo(() => {
-    return eligibleSows.find(s => s._id === formData.sowId) || null;
-  }, [formData.sowId, eligibleSows]);
+    return sowsForForm.find(s => s._id === formData.sowId) || null;
+  }, [formData.sowId, sowsForForm]);
 
   const pregCheckDatePreview = useMemo(() => {
     if (!formData.serviceDate) return '-';
@@ -107,8 +152,9 @@ export default function BreedingRecord() {
       return;
     }
 
-    const sow = eligibleSows.find(s => s._id === formData.sowId);
-    const boar = eligibleBoars.find(b => b._id === formData.boarId);
+    // Find sow from the appropriate list
+    const sow = sowsForForm.find(s => s._id === formData.sowId) || sows.find(s => s._id === formData.sowId);
+    const boar = eligibleBoars.find(b => b._id === formData.boarId) || boars.find(b => b._id === formData.boarId);
 
     if (!sow || !boar) {
       setFormError('Invalid Sow or Boar selection.');
@@ -330,7 +376,7 @@ export default function BreedingRecord() {
         <Modal
           isOpen={isAddOpen}
           onClose={() => setIsAddOpen(false)}
-          title="Create Service / Breeding Record"
+          title={isBoarInitiated ? `Start Mating Record — Boar ${locationState.preselectedBoarNo}` : 'Create Service / Breeding Record'}
           footer={
             <>
               <button 
@@ -341,10 +387,10 @@ export default function BreedingRecord() {
               </button>
               <button 
                 onClick={handleCreate}
-                disabled={eligibleSows.length === 0 || eligibleBoars.length === 0}
+                disabled={sowsForForm.length === 0}
                 className="px-4 py-2 bg-primary hover:bg-primary-dark text-black text-xs rounded uppercase font-bold shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Record Service
+                {isBoarInitiated ? 'Start Mating & Track Pregnancy' : 'Record Service'}
               </button>
             </>
           }
@@ -356,12 +402,25 @@ export default function BreedingRecord() {
               </div>
             )}
 
-            {eligibleSows.length === 0 || eligibleBoars.length === 0 ? (
+            {/* Boar-initiated context banner */}
+            {isBoarInitiated && (
+              <div className="bg-success/10 border border-success/25 p-3 rounded flex items-center gap-2 text-[11px] text-success">
+                <Heart className="w-4 h-4 flex-shrink-0" />
+                <div>
+                  <span className="font-bold uppercase tracking-wide">Mating Period Initiated — Boar {locationState.preselectedBoarNo}</span>
+                  <p className="text-[10px] text-textSecondary mt-0.5">Select a sow to pair with this boar and start tracking the pregnancy cycle.</p>
+                </div>
+              </div>
+            )}
+
+            {sowsForForm.length === 0 ? (
                <div className="p-4 bg-sidebar rounded border border-borderDark text-center flex flex-col items-center justify-center gap-2">
                  <AlertTriangle className="w-5 h-5 text-warning mb-1" />
-                 <span className="font-bold text-textPrimary">Cannot Register Breeding</span>
+                 <span className="font-bold text-textPrimary">No Eligible Sows Available</span>
                  <span className="text-[11px] text-textSecondary">
-                   Ensure you have at least one Sow in "Heat" (or "In Heat") and one Boar set to "Mating" (or "Breeding Ready/Active").
+                   {isBoarInitiated 
+                     ? 'No active sows found. Ensure you have sows registered in the Sow module.'
+                     : 'Ensure you have at least one Sow in "Heat" (or "In Heat") status.'}
                  </span>
                </div>
             ) : (
@@ -374,7 +433,7 @@ export default function BreedingRecord() {
                         onChange={(e) => setFormData({ ...formData, sowId: e.target.value })}
                         className="dense-select"
                       >
-                        {eligibleSows.map(s => (
+                        {sowsForForm.map(s => (
                           <option key={s._id} value={s._id}>{s.animalNo} [{s.breed}]</option>
                         ))}
                       </select>
@@ -398,7 +457,7 @@ export default function BreedingRecord() {
                         onChange={(e) => setFormData({ ...formData, boarId: e.target.value })}
                         className="dense-select"
                       >
-                        {eligibleBoars.map(b => (
+                        {boarsForForm.map(b => (
                           <option key={b._id} value={b._id}>
                             {b.animalNo} [{b.breed}] - {b.fertilityAnalytics?.pregnancySuccessRate || 0}% Success
                           </option>

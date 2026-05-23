@@ -1176,6 +1176,177 @@ export default function SowDetailPage() {
           </div>
         </div>
 
+        {/* ============================================================
+            FULL-WIDTH LIFECYCLE TRANSACTIONS TIMELINE 
+            Unified feed: Heat → Mating → Pregnancy → Farrowing → Treatment
+            ============================================================ */}
+        <div className="bg-cardBg border border-borderDark rounded-lg p-5 print:hidden">
+          <div className="flex items-center justify-between mb-4 border-b border-borderDark/50 pb-2.5">
+            <div>
+              <span className="text-[10px] font-black uppercase text-textPrimary tracking-widest flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                Lifecycle Transactions Log — Unified Reproductive Timeline
+              </span>
+              <p className="text-[9px] text-textSecondary mt-0.5 uppercase tracking-wider">All events: Heat • Mating • Pregnancy • Farrowing • Treatment • Mortality — chronological order</p>
+            </div>
+            <span className="text-[9px] text-textSecondary font-mono bg-sidebar border border-borderDark px-2 py-1 rounded">
+              {(() => {
+                let count = 0;
+                if (selectedSow.heatHistory) count += selectedSow.heatHistory.length;
+                if (selectedSow.breedingHistory) count += selectedSow.breedingHistory.length;
+                if (selectedSow.farrowingHistory) count += selectedSow.farrowingHistory.length;
+                if (selectedSow.treatmentHistory) count += selectedSow.treatmentHistory.length;
+                return `${count} Events`;
+              })()}
+            </span>
+          </div>
+
+          {/* Transactions Table */}
+          <div className="dense-table-container">
+            <table className="dense-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Event Type</th>
+                  <th>Cycle / Phase</th>
+                  <th>Details</th>
+                  <th>Outcome / Status</th>
+                  <th>Entered By</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const events = [];
+
+                  // 1. Heat Events
+                  (selectedSow.heatHistory || []).forEach(h => {
+                    events.push({
+                      date: new Date(h.heatDate),
+                      dateStr: new Date(h.heatDate).toLocaleDateString(),
+                      type: 'HEAT',
+                      cycle: `Heat Cycle #${h.heatNumber}`,
+                      details: `Duration: ${h.durationHours}h • Next expected: ${new Date(h.expectedNextHeat).toLocaleDateString()}`,
+                      outcome: h.status || 'In Heat',
+                      enteredBy: h.enteredBy || '-',
+                      notes: h.notes || '-',
+                      dotColor: 'bg-primary',
+                      labelColor: 'text-primary bg-primary/10 border-primary/20',
+                      label: '🔥 HEAT'
+                    });
+                  });
+
+                  // 2. Mating / Breeding Events
+                  (selectedSow.breedingHistory || []).forEach((b, idx) => {
+                    events.push({
+                      date: new Date(b.serviceDate),
+                      dateStr: new Date(b.serviceDate).toLocaleDateString(),
+                      type: 'MATING',
+                      cycle: `Mating Service`,
+                      details: `Boar: ${b.boarAnimalNo} • Method: ${b.matingType} • Est. Farrowing: ${b.expectedFarrowingDate ? new Date(b.expectedFarrowingDate).toLocaleDateString() : '-'}`,
+                      outcome: b.pregnancyConfirmed || 'Pending',
+                      enteredBy: b.technician || '-',
+                      notes: b.notes || '-',
+                      dotColor: 'bg-blueAccent',
+                      labelColor: 'text-blueAccent bg-blueAccent/10 border-blueAccent/20',
+                      label: '💑 MATING'
+                    });
+                  });
+
+                  // 3. Farrowing Events
+                  (selectedSow.farrowingHistory || []).forEach(f => {
+                    events.push({
+                      date: new Date(f.farrowingDate),
+                      dateStr: new Date(f.farrowingDate).toLocaleDateString(),
+                      type: 'FARROWING',
+                      cycle: `Parity #${f.parity} Farrowing`,
+                      details: `Born Alive: ${f.bornAlive} • Born Dead: ${f.bornDead} • Litter Wt: ${f.litterWeight || 0}kg • Weaned: ${f.weaningCount}`,
+                      outcome: `${f.bornAlive} Piglets`,
+                      enteredBy: f.enteredBy || 'System',
+                      notes: f.mummified > 0 ? `${f.mummified} mummified` : (f.weakPiglets > 0 ? `${f.weakPiglets} weak piglets noted` : 'Normal birth outcome'),
+                      dotColor: 'bg-success',
+                      labelColor: 'text-success bg-success/10 border-success/20',
+                      label: '🐖 FARROWING'
+                    });
+                  });
+
+                  // 4. Treatment Events
+                  (selectedSow.treatmentHistory || []).forEach(t => {
+                    events.push({
+                      date: new Date(t.treatmentDate),
+                      dateStr: new Date(t.treatmentDate).toLocaleDateString(),
+                      type: 'TREATMENT',
+                      cycle: `Vet Treatment`,
+                      details: `Symptoms: ${t.symptoms} • Dx: ${t.diagnosis} • Medicine: ${t.medicineUsed || '-'}`,
+                      outcome: t.recoveryStatus,
+                      enteredBy: t.enteredBy || '-',
+                      notes: t.doctorNotes || t.vaccineGiven ? `Vaccine: ${t.vaccineGiven || 'None'}` : '-',
+                      dotColor: 'bg-danger',
+                      labelColor: 'text-danger bg-danger/10 border-danger/20',
+                      label: '🩺 TREATMENT'
+                    });
+                  });
+
+                  // 5. Status Change Events (non-initial)
+                  (selectedSow.statusHistory || []).filter(s => s.previousStatus && s.previousStatus !== 'None').forEach(s => {
+                    events.push({
+                      date: new Date(s.updatedAt || s.changeDate),
+                      dateStr: new Date(s.updatedAt || s.changeDate).toLocaleDateString(),
+                      type: 'STATUS',
+                      cycle: `Status Transition`,
+                      details: `${s.previousStatus} → ${s.newStatus}`,
+                      outcome: s.newStatus,
+                      enteredBy: s.updatedBy || '-',
+                      notes: s.notes || '-',
+                      dotColor: 'bg-warning',
+                      labelColor: 'text-warning bg-warning/10 border-warning/20',
+                      label: '⚙️ STATUS'
+                    });
+                  });
+
+                  // Sort by date descending (most recent first)
+                  events.sort((a, b) => b.date - a.date);
+
+                  if (events.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-textSecondary italic">
+                          No lifecycle transaction events logged yet. Use the action buttons above to start recording events.
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return events.map((ev, idx) => (
+                    <tr key={`tx_${idx}`} className={idx % 2 === 0 ? '' : 'bg-sidebar/20'}>
+                      <td className="font-mono font-bold text-textPrimary whitespace-nowrap">{ev.dateStr}</td>
+                      <td>
+                        <span className={`text-[9px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${ev.labelColor}`}>
+                          {ev.label}
+                        </span>
+                      </td>
+                      <td className="font-semibold text-textPrimary">{ev.cycle}</td>
+                      <td className="text-textSecondary text-[10px] max-w-[200px]">{ev.details}</td>
+                      <td>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                          ev.outcome === 'Confirmed' || ev.outcome === 'Recovered' || ev.type === 'FARROWING' ? 'bg-success/15 text-success' :
+                          ev.outcome === 'Pending' || ev.outcome === 'Under Treatment' || ev.outcome === 'In Heat' ? 'bg-warning/15 text-warning' :
+                          ev.outcome === 'Failed' || ev.outcome === 'Dead' || ev.outcome === 'Culled' ? 'bg-danger/15 text-danger' :
+                          'bg-sidebar text-textSecondary'
+                        }`}>
+                          {ev.outcome}
+                        </span>
+                      </td>
+                      <td className="text-textSecondary font-semibold text-[10px]">{ev.enteredBy}</td>
+                      <td className="italic text-textSecondary text-[10px] max-w-[150px] truncate" title={ev.notes}>{ev.notes}</td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* ==============================================
             MODAL 1: EDIT CORE DETAILS
             ============================================== */}

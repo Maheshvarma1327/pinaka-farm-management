@@ -376,6 +376,16 @@ export default function BoarRecord() {
               <ClipboardList className="w-3.5 h-3.5" />
             </button>
           )}
+          {canEdit && (
+            <button 
+              onClick={() => navigate('/breeding', { state: { openMating: true, preselectedBoarId: row._id, preselectedBoarNo: row.animalNo } })}
+              disabled={row.status === 'Dead' || row.status === 'Culled' || row.status === 'Sold' || row.status === 'Inactive'}
+              className="p-1 hover:bg-cardBg hover:text-success rounded text-textSecondary disabled:opacity-30 disabled:cursor-not-allowed"
+              title={`Start mating record for Boar ${row.animalNo}`}
+            >
+              <Heart className="w-3.5 h-3.5" />
+            </button>
+          )}
           {user?.role === 'Admin' && (
             <button 
               onClick={() => handleDelete(row._id)}
