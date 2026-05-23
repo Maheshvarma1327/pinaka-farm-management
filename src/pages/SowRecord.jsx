@@ -296,6 +296,119 @@ export default function SowRecord() {
       sortable: true,
       render: (val) => <StatusBadge status={val} /> 
     },
+    { 
+      header: "Cycle / Days Tracker", 
+      accessor: "status", 
+      sortable: false,
+      render: (val, row) => {
+        const now = new Date();
+        
+        // 1. Pregnant sow
+        if (row.pregnancyStatus === 'Pregnant' || val === 'Pregnant') {
+          if (row.lastServiceDate) {
+            const diffTime = Math.abs(now - new Date(row.lastServiceDate));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return (
+              <div className="flex flex-col">
+                <span className="font-bold text-warning">Gestation: {diffDays}d</span>
+                <span className="text-[10px] text-textSecondary">Mated: {new Date(row.lastServiceDate).toLocaleDateString()}</span>
+              </div>
+            );
+          }
+          return <span className="text-warning font-semibold">Pregnant</span>;
+        }
+
+        // 2. Pregnancy Pending Confirmation
+        if (val === 'Pregnancy Pending' || row.pregnancyStatus === 'Pending Confirmation') {
+          if (row.lastServiceDate) {
+            const diffTime = Math.abs(now - new Date(row.lastServiceDate));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return (
+              <div className="flex flex-col">
+                <span className="font-semibold text-info">Mated: {diffDays}d ago</span>
+                <span className="text-[10px] text-textSecondary">Scan pending</span>
+              </div>
+            );
+          }
+          return <span className="text-info font-semibold">Mated (Pending Scan)</span>;
+        }
+
+        // 3. In Heat
+        if (val === 'In Heat') {
+          if (row.lastHeatDate) {
+            const diffTime = Math.abs(now - new Date(row.lastHeatDate));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return (
+              <div className="flex flex-col">
+                <span className="font-extrabold text-primary animate-pulse">Heat Day: {diffDays}</span>
+                <span className="text-[10px] text-textSecondary">Started: {new Date(row.lastHeatDate).toLocaleDateString()}</span>
+              </div>
+            );
+          }
+          return <span className="text-primary font-bold">In Heat</span>;
+        }
+
+        // 4. Lactating (Farrowed)
+        if (val === 'Lactating') {
+          if (row.farrowingHistory && row.farrowingHistory.length > 0) {
+            const lastFarrow = row.farrowingHistory[row.farrowingHistory.length - 1];
+            const diffTime = Math.abs(now - new Date(lastFarrow.farrowingDate));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return (
+              <div className="flex flex-col">
+                <span className="font-bold text-success">Lactating: {diffDays}d</span>
+                <span className="text-[10px] text-textSecondary">Wean due: {Math.max(0, 60 - diffDays)}d</span>
+              </div>
+            );
+          }
+          return <span className="text-success font-semibold">Lactating</span>;
+        }
+
+        // 5. Dead / Culled / Sold
+        if (val === 'Dead' || val === 'Culled' || val === 'Sold') {
+          const lastStatus = row.statusHistory?.filter(h => h.newStatus === val)?.pop();
+          const dateStr = lastStatus ? new Date(lastStatus.updatedAt).toLocaleDateString() : (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'N/A');
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-danger">{val} Event</span>
+              <span className="text-[10px] text-textSecondary">Date: {dateStr}</span>
+            </div>
+          );
+        }
+
+        // 6. Active / Normal - Next Heat cycle monitoring
+        if (row.lastHeatDate) {
+          const nextHeat = new Date(new Date(row.lastHeatDate).getTime() + (21 * 24 * 60 * 60 * 1000));
+          const diffTime = nextHeat - now;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays > 0) {
+            return (
+              <div className="flex flex-col">
+                <span className="font-medium text-textPrimary">Next Heat: in {diffDays}d</span>
+                <span className="text-[10px] text-textSecondary">Due: {nextHeat.toLocaleDateString()}</span>
+              </div>
+            );
+          } else if (diffDays === 0) {
+            return (
+              <div className="flex flex-col">
+                <span className="font-extrabold text-primary animate-pulse">Heat Due Today!</span>
+                <span className="text-[10px] text-textSecondary">Due: {nextHeat.toLocaleDateString()}</span>
+              </div>
+            );
+          } else {
+            return (
+              <div className="flex flex-col">
+                <span className="font-bold text-danger">Heat Overdue: {Math.abs(diffDays)}d</span>
+                <span className="text-[10px] text-textSecondary">Was due: {nextHeat.toLocaleDateString()}</span>
+              </div>
+            );
+          }
+        }
+
+        return <span className="text-textSecondary/40">No cycle logs</span>;
+      }
+    },
     {
       header: "Actions",
       accessor: "_id",
