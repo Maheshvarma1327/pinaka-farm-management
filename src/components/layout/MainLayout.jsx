@@ -76,30 +76,62 @@ export default function MainLayout({ children }) {
   // Unread notification count
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Active module definitions matching the approved PINAKA requirements
-  const modules = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Grower Record Card', path: '/growers', icon: ClipboardList },
-    { name: 'Sow Record Card', path: '/sows', icon: HeartPulse },
-    { name: 'Boar Record Card', path: '/boars', icon: Zap },
-    { name: 'Breeding Record', path: '/breeding', icon: GitCompare },
-    { name: 'Farrowing Record', path: '/farrowing', icon: Sparkles },
-    { name: 'Parity / Litter Record', path: '/parity', icon: Layers },
-    { name: 'Animal Stock Register', path: '/stock', icon: Database },
-    { name: 'Treatment Register', path: '/treatment', icon: Stethoscope },
-    { name: 'Medicine & Vaccine Register', path: '/medicine', icon: Pill },
-    { name: 'Mortality Register', path: '/mortality', icon: Skull },
-    { name: 'Sale Register', path: '/sales', icon: DollarSign },
-    { name: 'Cash Book', path: '/cashbook', icon: Wallet },
-    { name: 'Reports', path: '/reports', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
+  // Dashboard standalone item
+  const dashboardItem = { name: 'Dashboard', path: '/', icon: LayoutDashboard };
+
+  // Grouped modules to follow actual farm operational workflow
+  const navigationGroups = [
+    {
+      groupName: 'Animal Management',
+      items: [
+        { name: 'Animal Stock Register', path: '/stock', icon: Database },
+        { name: 'Sow Record Card', path: '/sows', icon: HeartPulse },
+        { name: 'Boar Record Card', path: '/boars', icon: Zap },
+        { name: 'Grower Record Card', path: '/growers', icon: ClipboardList }
+      ]
+    },
+    {
+      groupName: 'Breeding Management',
+      items: [
+        { name: 'Breeding Record', path: '/breeding', icon: GitCompare },
+        { name: 'Farrowing Record', path: '/farrowing', icon: Sparkles },
+        { name: 'Parity / Litter Record', path: '/parity', icon: Layers }
+      ]
+    },
+    {
+      groupName: 'Health Management',
+      items: [
+        { name: 'Treatment Register', path: '/treatment', icon: Stethoscope },
+        { name: 'Medicine & Vaccine Register', path: '/medicine', icon: Pill },
+        { name: 'Mortality Register', path: '/mortality', icon: Skull }
+      ]
+    },
+    {
+      groupName: 'Business & Reports',
+      items: [
+        { name: 'Sale Register', path: '/sales', icon: DollarSign },
+        { name: 'Reports', path: '/reports', icon: BarChart3 },
+        { name: 'Cash Book', path: '/cashbook', icon: Wallet }
+      ]
+    },
+    {
+      groupName: 'System',
+      items: [
+        { name: 'Settings', path: '/settings', icon: Settings }
+      ]
+    }
   ];
 
   // Resolve dynamic breadcrumbs
   const getBreadcrumbs = () => {
     const currentPath = location.pathname;
-    const currentModule = modules.find(m => m.path === currentPath);
-    return currentModule ? currentModule.name : 'Dashboard';
+    if (currentPath === '/') return 'Dashboard';
+    
+    for (const group of navigationGroups) {
+      const match = group.items.find(m => m.path === currentPath);
+      if (match) return match.name;
+    }
+    return 'Dashboard';
   };
 
   return (
@@ -138,23 +170,53 @@ export default function MainLayout({ children }) {
         </div>
 
         {/* Sidebar Nav Links list */}
-        <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5 scrollbar-thin">
-          {modules.map((mod, index) => (
-            <NavLink
-              key={index}
-              to={mod.path}
-              className={({ isActive }) => 
-                `flex items-center gap-3 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-all border border-transparent ${
-                  isActive 
-                    ? 'bg-primary/10 text-primary border-primary/20 shadow-glow' 
-                    : 'text-textSecondary hover:bg-cardBg hover:text-textPrimary hover:border-borderDark/40'
-                }`
-              }
-              title={mod.name}
-            >
-              <mod.icon className="w-4 h-4 shrink-0" />
-              {!isSidebarCollapsed && <span className="truncate">{mod.name}</span>}
-            </NavLink>
+        <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5 scrollbar-thin select-none">
+          {/* Dashboard Item */}
+          <NavLink
+            to={dashboardItem.path}
+            className={({ isActive }) => 
+              `flex items-center gap-3 px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all border border-transparent ${
+                isActive 
+                  ? 'bg-primary/10 text-primary border-primary/20 shadow-glow' 
+                  : 'text-textSecondary hover:bg-cardBg hover:text-textPrimary hover:border-borderDark/40'
+              }`
+            }
+            title={dashboardItem.name}
+          >
+            <dashboardItem.icon className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">{dashboardItem.name}</span>}
+          </NavLink>
+
+          {/* Grouped Items */}
+          {navigationGroups.map((group, groupIdx) => (
+            <React.Fragment key={groupIdx}>
+              {/* Sidebar Header Divider */}
+              {!isSidebarCollapsed ? (
+                <div className="px-3 pt-4 pb-1 text-[9px] font-black uppercase text-textMuted tracking-widest select-none">
+                  {group.groupName}
+                </div>
+              ) : (
+                <div className="h-[1px] bg-borderDark/30 my-2 mx-2" />
+              )}
+
+              {group.items.map((mod, index) => (
+                <NavLink
+                  key={index}
+                  to={mod.path}
+                  className={({ isActive }) => 
+                    `flex items-center gap-3 px-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-all border border-transparent ${
+                      isActive 
+                        ? 'bg-primary/10 text-primary border-primary/20 shadow-glow' 
+                        : 'text-textSecondary hover:bg-cardBg hover:text-textPrimary hover:border-borderDark/40'
+                    }`
+                  }
+                  title={mod.name}
+                >
+                  <mod.icon className="w-4 h-4 shrink-0" />
+                  {!isSidebarCollapsed && <span className="truncate">{mod.name}</span>}
+                </NavLink>
+              ))}
+            </React.Fragment>
           ))}
         </nav>
 
@@ -201,23 +263,47 @@ export default function MainLayout({ children }) {
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto flex flex-col gap-1 pr-1">
-              {modules.map((mod, index) => (
-                <NavLink
-                  key={index}
-                  to={mod.path}
-                  onClick={closeMobile}
-                  className={({ isActive }) => 
-                    `flex items-center gap-3 px-3 py-2 rounded text-xs font-bold uppercase tracking-wider border border-transparent ${
-                      isActive 
-                        ? 'bg-primary/10 text-primary border-primary/20 shadow-glow' 
-                        : 'text-textSecondary hover:bg-cardBg hover:text-textPrimary'
-                    }`
-                  }
-                >
-                  <mod.icon className="w-4 h-4 shrink-0" />
-                  <span>{mod.name}</span>
-                </NavLink>
+            <nav className="flex-1 overflow-y-auto flex flex-col gap-1 pr-1 select-none">
+              {/* Dashboard */}
+              <NavLink
+                to={dashboardItem.path}
+                onClick={closeMobile}
+                className={({ isActive }) => 
+                  `flex items-center gap-3 px-3 py-2 rounded text-xs font-bold uppercase tracking-wider border border-transparent ${
+                    isActive 
+                      ? 'bg-primary/10 text-primary border-primary/20 shadow-glow' 
+                      : 'text-textSecondary hover:bg-cardBg hover:text-textPrimary'
+                  }`
+                }
+              >
+                <dashboardItem.icon className="w-4 h-4 shrink-0" />
+                <span>{dashboardItem.name}</span>
+              </NavLink>
+
+              {/* Grouped Items */}
+              {navigationGroups.map((group, groupIdx) => (
+                <React.Fragment key={groupIdx}>
+                  <div className="px-3 pt-4 pb-1 text-[9px] font-black uppercase text-textMuted tracking-widest">
+                    {group.groupName}
+                  </div>
+                  {group.items.map((mod, index) => (
+                    <NavLink
+                      key={index}
+                      to={mod.path}
+                      onClick={closeMobile}
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 px-3 py-2 rounded text-xs font-bold uppercase tracking-wider border border-transparent ${
+                          isActive 
+                            ? 'bg-primary/10 text-primary border-primary/20 shadow-glow' 
+                            : 'text-textSecondary hover:bg-cardBg hover:text-textPrimary'
+                        }`
+                      }
+                    >
+                      <mod.icon className="w-4 h-4 shrink-0" />
+                      <span>{mod.name}</span>
+                    </NavLink>
+                  ))}
+                </React.Fragment>
               ))}
             </nav>
             
@@ -277,7 +363,7 @@ export default function MainLayout({ children }) {
               <input
                 type="text"
                 placeholder="Global animal search..."
-                className="w-full bg-[#121c30]/20 border border-borderDark text-[11px] pl-8 pr-3 py-1.5 rounded-md outline-none focus:border-primary/50 text-textPrimary placeholder:text-textSecondary/40"
+                className="w-full bg-background/40 border border-borderDark text-[11px] pl-8 pr-3 py-1.5 rounded-md outline-none focus:border-primary/50 text-textPrimary placeholder:text-textSecondary/40"
               />
             </div>
 

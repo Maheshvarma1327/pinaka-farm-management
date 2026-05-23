@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DatePicker from '../components/ui/DatePicker';
 import { useSowStore } from '../store/useSowStore';
 import { useAuthStore } from '../store/useAuthStore';
 import DataTable from '../components/ui/DataTable';
@@ -498,7 +499,7 @@ export default function SowRecord() {
                 
                 let borderClass = 'border-borderDark';
                 let iconColor = 'text-textSecondary';
-                let bgClass = 'bg-[#0f151f]';
+                let bgClass = 'bg-surface';
 
                 if (isCritical) {
                   borderClass = 'border-danger/60 shadow-[0_0_8px_rgba(239,83,80,0.15)]';
@@ -674,11 +675,9 @@ export default function SowRecord() {
               </FormGrid>
               <FormGrid cols={2}>
                 <FormField label="DOB / Birth Date" required>
-                  <input
-                     type="date"
+                  <DatePicker
                      value={formData.dob}
-                     onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                     className="dense-input"
+                     onChange={(val) => setFormData({ ...formData, dob: val })}
                   />
                 </FormField>
                 <FormField label="Gender / Sex (Locked)" required>
@@ -782,11 +781,9 @@ export default function SowRecord() {
                   </select>
                 </FormField>
                 <FormField label="Last Active Heat Date">
-                  <input
-                     type="date"
+                  <DatePicker
                      value={formData.lastHeatDate}
-                     onChange={(e) => setFormData({ ...formData, lastHeatDate: e.target.value })}
-                     className="dense-input"
+                     onChange={(val) => setFormData({ ...formData, lastHeatDate: val })}
                   />
                 </FormField>
               </FormGrid>
@@ -836,7 +833,7 @@ export default function SowRecord() {
             )}
             
             {growersList.length === 0 ? (
-              <div className="p-6 bg-[#0f151f] rounded border border-borderDark text-center flex flex-col items-center justify-center gap-3">
+              <div className="p-6 bg-surface rounded border border-borderDark text-center flex flex-col items-center justify-center gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-textPrimary">No Female Growers Eligible for Promotion</span>
                   <span className="text-[11px] text-textSecondary">

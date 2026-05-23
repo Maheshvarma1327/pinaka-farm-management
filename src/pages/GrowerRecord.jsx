@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DatePicker from '../components/ui/DatePicker';
 import { useGrowerStore } from '../store/useGrowerStore';
 import { useAuthStore } from '../store/useAuthStore';
 import DataTable from '../components/ui/DataTable';
@@ -539,11 +540,9 @@ export default function GrowerRecord() {
               </FormGrid>
               <FormGrid cols={2}>
                 <FormField label="DOB / Birth Date" required>
-                  <input
-                     type="date"
+                  <DatePicker
                      value={formData.dob}
-                     onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                     className="dense-input"
+                     onChange={(val) => setFormData({ ...formData, dob: val })}
                   />
                 </FormField>
                 <FormField label="Sex / Gender" required>
@@ -866,11 +865,9 @@ export default function GrowerRecord() {
             <FormSection title="Weight Log Entry">
               <FormGrid cols={3}>
                 <FormField label="Weighing Date" required>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={weightData.date}
-                    onChange={(e) => setWeightData({ ...weightData, date: e.target.value })}
-                    className="dense-input"
+                    onChange={(val) => setWeightData({ ...weightData, date: val })}
                   />
                 </FormField>
                 <FormField label="Weight Type" required>

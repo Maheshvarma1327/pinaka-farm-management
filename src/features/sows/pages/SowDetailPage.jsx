@@ -823,7 +823,7 @@ export default function SowDetailPage() {
                   </div>
                   
                   {/* Visual Progress Bar */}
-                  <div className="w-full bg-[#151c28] rounded-full h-3.5 border border-borderDark overflow-hidden relative">
+                  <div className="w-full bg-surface rounded-full h-3.5 border border-borderDark overflow-hidden relative">
                     <div 
                       className="bg-gradient-to-r from-primary to-success h-full transition-all duration-300"
                       style={{ width: `${gestationInfo.percentage}%` }}
@@ -1114,7 +1114,7 @@ export default function SowDetailPage() {
                 </div>
                 
                 <div className="flex flex-col gap-3 text-[11px]">
-                  <div className="bg-[#0f151f] border border-borderDark rounded-lg p-3 text-center">
+                  <div className="bg-surface border border-borderDark rounded-lg p-3 text-center">
                     <span className="text-[9px] text-textSecondary uppercase tracking-widest font-black">Weaning Survival Rate</span>
                     <h3 className="text-2xl font-black text-success mt-1">{litterMetrics.weaningSurvivalRate}%</h3>
                     <p className="text-[9px] text-textSecondary mt-0.5">Weaned: {litterMetrics.totalWeaned} / Born Alive: {litterMetrics.totalBornAlive}</p>

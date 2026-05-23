@@ -11,9 +11,9 @@
   --color-border-strong: #DFC7A6;
   --color-navbar-bg: #FFFFFF;
   --color-navbar-border: #EADBC8;
-  --color-text-primary: #1F1A17;
-  --color-text-secondary: #6E5C4F;
-  --color-text-muted: #9A8876;
+  --color-text-primary: #1E293B; /* Crisp dark slate gray for readability */
+  --color-text-secondary: #475569; /* Balanced secondary slate gray */
+  --color-text-muted: #64748B; /* Soft muted gray */
   
   --color-primary: #FF6B00;
   --color-primary-hover: #E55A00;
@@ -35,35 +35,35 @@
 }
 
 .dark {
-  --color-background: #121212;
-  --color-page-bg: #1A1A1A;
-  --color-card-bg: #242424;
-  --color-card-hover: #2B2B2B;
-  --color-border: #333333;
-  --color-border-strong: #333333;
-  --color-navbar-bg: #1A1A1A;
-  --color-navbar-border: #333333;
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #C7C7C7;
-  --color-text-muted: #9CA3AF;
+  --color-background: #0F172A; /* Slate-900: Modern premium soft dark background */
+  --color-page-bg: #1E293B;       /* Slate-800: Page surface */
+  --color-card-bg: #0F172A;       /* Slate-900: Soft card background */
+  --color-card-hover: #1E293B;    /* Slate-800: Card hover background */
+  --color-border: #334155;        /* Slate-700: Sleek border */
+  --color-border-strong: #475569; /* Slate-600: High-contrast border */
+  --color-navbar-bg: #0F172A;     /* Slate-900: Sidebar panel */
+  --color-navbar-border: #334155;
+  --color-text-primary: #F8FAFC;  /* Slate-50: Perfect bright text readability */
+  --color-text-secondary: #CBD5E1; /* Slate-300: High contrast secondary text */
+  --color-text-muted: #64748B;    /* Slate-500: Clear muted text */
   
   --color-primary: #FF6B00;
   --color-primary-hover: #FF8C3A;
   --color-primary-bg: #2D1A00;
-  --color-secondary: #1F1F1F;
+  --color-secondary: #1E293B;
   
   --color-success: #4CAF50;
-  --color-success-bg: #1B5E20;
+  --color-success-bg: rgba(76, 175, 80, 0.15); /* Softer green alert fill */
   --color-warning: #FF9800;
-  --color-warning-bg: #2D1A00;
+  --color-warning-bg: rgba(255, 152, 0, 0.15); /* Softer orange alert fill */
   --color-danger: #EF5350;
-  --color-danger-bg: #3B0000;
-  --color-info: #42A5F5;
-  --color-info-bg: #0D2137;
+  --color-danger-bg: rgba(239, 83, 80, 0.15); /* Softer red alert fill */
+  --color-info: #38BDF8;
+  --color-info-bg: rgba(56, 189, 248, 0.15); /* Softer blue alert fill */
 
-  --color-table-row1: #242424;
-  --color-table-row2: #2A2A2A;
-  --color-table-header: #1F1F1F;
+  --color-table-row1: #0F172A;
+  --color-table-row2: #1E293B;
+  --color-table-header: #0F172A;
 }
 
 @layer base {

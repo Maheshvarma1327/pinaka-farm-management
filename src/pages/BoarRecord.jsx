@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DatePicker from '../components/ui/DatePicker';
 import { useBoarStore } from '../store/useBoarStore';
 import { useAuthStore } from '../store/useAuthStore';
 import DataTable from '../components/ui/DataTable';
@@ -562,11 +563,9 @@ export default function BoarRecord() {
                   />
                 </FormField>
                 <FormField label="Approx Date of Birth / DOB *" required>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={formData.dob}
-                    onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                    className="dense-input"
+                    onChange={(val) => setFormData({ ...formData, dob: val })}
                     required
                   />
                 </FormField>
@@ -643,11 +642,9 @@ export default function BoarRecord() {
               </FormGrid>
               <FormGrid cols={3}>
                 <FormField label="Date of Puberty (if reached)">
-                  <input
-                    type="date"
+                  <DatePicker
                     value={formData.pubertyDate}
-                    onChange={(e) => setFormData({ ...formData, pubertyDate: e.target.value })}
-                    className="dense-input"
+                    onChange={(val) => setFormData({ ...formData, pubertyDate: val })}
                   />
                 </FormField>
                 <FormField label="Teats Count">

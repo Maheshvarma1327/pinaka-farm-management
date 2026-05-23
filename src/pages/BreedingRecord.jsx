@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DatePicker from '../components/ui/DatePicker';
 import { useBreedingStore } from '../store/useBreedingStore';
 import { useSowStore } from '../store/useSowStore';
 import { useBoarStore } from '../store/useBoarStore';
@@ -470,11 +471,9 @@ export default function BreedingRecord() {
                 <FormSection title="3. Service Details">
                   <FormGrid cols={2}>
                     <FormField label="Service / Mating Date" required>
-                      <input
-                         type="date"
-                         value={formData.serviceDate}
-                         onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
-                         className="dense-input"
+                      <DatePicker
+                        value={formData.serviceDate}
+                        onChange={(val) => setFormData({ ...formData, serviceDate: val })}
                       />
                     </FormField>
                     <FormField label="Mating Type" required>

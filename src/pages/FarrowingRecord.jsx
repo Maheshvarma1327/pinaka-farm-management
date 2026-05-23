@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DatePicker from '../components/ui/DatePicker';
 import { useFarrowingStore } from '../store/useFarrowingStore';
 import { useSowStore } from '../store/useSowStore';
 import { useBreedingStore } from '../store/useBreedingStore';
@@ -404,10 +405,18 @@ export default function FarrowingRecord() {
               </FormGrid>
               <FormGrid cols={2}>
                 <FormField label="Service Date">
-                  <input type="date" value={formData.serviceDate} onChange={(e) => setFormData({...formData, serviceDate: e.target.value})} disabled={entryMethod === 'auto'} className="dense-input" />
+                  <DatePicker 
+                    value={formData.serviceDate} 
+                    onChange={(val) => setFormData({...formData, serviceDate: val})} 
+                    disabled={entryMethod === 'auto'} 
+                  />
                 </FormField>
                 <FormField label="Expected Farrowing Date">
-                  <input type="date" value={formData.expectedFarrowingDate} onChange={(e) => setFormData({...formData, expectedFarrowingDate: e.target.value})} disabled={entryMethod === 'auto'} className="dense-input" />
+                  <DatePicker 
+                    value={formData.expectedFarrowingDate} 
+                    onChange={(val) => setFormData({...formData, expectedFarrowingDate: val})} 
+                    disabled={entryMethod === 'auto'} 
+                  />
                 </FormField>
               </FormGrid>
             </FormSection>
@@ -415,7 +424,10 @@ export default function FarrowingRecord() {
             <FormSection title="Litter Outcome (Birth Record)">
                <FormGrid cols={1}>
                  <FormField label="Actual Farrowing Date" required>
-                    <input type="date" value={formData.actualFarrowingDate} onChange={(e) => setFormData({...formData, actualFarrowingDate: e.target.value})} className="dense-input text-info font-bold" />
+                    <DatePicker 
+                      value={formData.actualFarrowingDate} 
+                      onChange={(val) => setFormData({...formData, actualFarrowingDate: val})} 
+                    />
                  </FormField>
                </FormGrid>
                <FormGrid cols={4}>

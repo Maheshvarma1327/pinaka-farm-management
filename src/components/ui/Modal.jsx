@@ -53,7 +53,7 @@ export default function Modal({
       <div className={`relative w-full ${sizeClasses} bg-sidebar border border-borderDark rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.6)] flex flex-col max-h-[90vh] overflow-hidden`}>
         
         {/* Header Block */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-borderDark bg-[#121c30]/40">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-borderDark bg-cardBg/40">
           <h3 className="text-sm font-bold tracking-wider text-textPrimary uppercase">
             {title}
           </h3>

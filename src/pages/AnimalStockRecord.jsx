@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DatePicker from '../components/ui/DatePicker';
 import { useAnimalStore } from '../store/useAnimalStore';
 import DataTable from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -257,17 +258,12 @@ export default function AnimalStockRecord() {
 
           <FormGrid>
             <FormField label="Date of Birth" required id="dob">
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textSecondary pointer-events-none" />
-                <input
-                  id="dob"
-                  type="date"
-                  required
-                  className="input-field pl-9"
-                  value={formData.dob}
-                  onChange={e => setFormData({ ...formData, dob: e.target.value })}
-                />
-              </div>
+              <DatePicker
+                value={formData.dob}
+                onChange={val => setFormData({ ...formData, dob: val })}
+                className="input-field"
+                required
+              />
             </FormField>
 
             <FormField label="Sex" required id="sex">

@@ -144,7 +144,7 @@ export default function DataTable({
     <div className="flex flex-col gap-3.5 w-full">
       
       {/* Search Filters & Export Tools Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#0f151f] p-3 border border-borderDark rounded-lg no-print">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-sidebar p-3 border border-borderDark rounded-lg no-print">
         
         {/* Quick Search */}
         <div className="relative max-w-sm w-full">
