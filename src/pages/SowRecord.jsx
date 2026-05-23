@@ -303,82 +303,81 @@ export default function SowRecord() {
       render: (val, row) => {
         const now = new Date();
         
+        // Helper to get fallback date from statusHistory
+        const getFallbackDate = (targetStatus) => {
+          const matchedHistory = row.statusHistory?.filter(h => h.newStatus === targetStatus)?.pop();
+          return matchedHistory ? new Date(matchedHistory.updatedAt) : new Date(row.createdAt || Date.now());
+        };
+        
         // 1. Pregnant sow
         if (row.pregnancyStatus === 'Pregnant' || val === 'Pregnant') {
-          if (row.lastServiceDate) {
-            const diffTime = Math.abs(now - new Date(row.lastServiceDate));
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return (
-              <div className="flex flex-col">
-                <span className="font-bold text-warning">Gestation: {diffDays}d</span>
-                <span className="text-[10px] text-textSecondary">Mated: {new Date(row.lastServiceDate).toLocaleDateString()}</span>
-              </div>
-            );
-          }
-          return <span className="text-warning font-semibold">Pregnant</span>;
+          const serviceDate = row.lastServiceDate ? new Date(row.lastServiceDate) : getFallbackDate('Pregnant');
+          const diffTime = Math.abs(now - serviceDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return (
+            <div className="flex flex-col">
+              <span className="font-bold text-warning">Gestation: {diffDays}d</span>
+              <span className="text-[10px] text-textSecondary">Mated: {serviceDate.toLocaleDateString()}</span>
+            </div>
+          );
         }
 
         // 2. Pregnancy Pending Confirmation
         if (val === 'Pregnancy Pending' || row.pregnancyStatus === 'Pending Confirmation') {
-          if (row.lastServiceDate) {
-            const diffTime = Math.abs(now - new Date(row.lastServiceDate));
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return (
-              <div className="flex flex-col">
-                <span className="font-semibold text-info">Mated: {diffDays}d ago</span>
-                <span className="text-[10px] text-textSecondary">Scan pending</span>
-              </div>
-            );
-          }
-          return <span className="text-info font-semibold">Mated (Pending Scan)</span>;
+          const serviceDate = row.lastServiceDate ? new Date(row.lastServiceDate) : getFallbackDate('Pregnancy Pending');
+          const diffTime = Math.abs(now - serviceDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-info">Mated: {diffDays}d ago</span>
+              <span className="text-[10px] text-textSecondary">Scan pending</span>
+            </div>
+          );
         }
 
         // 3. In Heat
         if (val === 'In Heat') {
-          if (row.lastHeatDate) {
-            const diffTime = Math.abs(now - new Date(row.lastHeatDate));
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return (
-              <div className="flex flex-col">
-                <span className="font-extrabold text-primary animate-pulse">Heat Day: {diffDays}</span>
-                <span className="text-[10px] text-textSecondary">Started: {new Date(row.lastHeatDate).toLocaleDateString()}</span>
-              </div>
-            );
-          }
-          return <span className="text-primary font-bold">In Heat</span>;
+          const heatDate = row.lastHeatDate ? new Date(row.lastHeatDate) : getFallbackDate('In Heat');
+          const diffTime = Math.abs(now - heatDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return (
+            <div className="flex flex-col">
+              <span className="font-extrabold text-primary animate-pulse">Heat Day: {diffDays}</span>
+              <span className="text-[10px] text-textSecondary">Started: {heatDate.toLocaleDateString()}</span>
+            </div>
+          );
         }
 
         // 4. Lactating (Farrowed)
         if (val === 'Lactating') {
-          if (row.farrowingHistory && row.farrowingHistory.length > 0) {
-            const lastFarrow = row.farrowingHistory[row.farrowingHistory.length - 1];
-            const diffTime = Math.abs(now - new Date(lastFarrow.farrowingDate));
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return (
-              <div className="flex flex-col">
-                <span className="font-bold text-success">Lactating: {diffDays}d</span>
-                <span className="text-[10px] text-textSecondary">Wean due: {Math.max(0, 60 - diffDays)}d</span>
-              </div>
-            );
-          }
-          return <span className="text-success font-semibold">Lactating</span>;
+          const lacDate = (row.farrowingHistory && row.farrowingHistory.length > 0)
+            ? new Date(row.farrowingHistory[row.farrowingHistory.length - 1].farrowingDate)
+            : getFallbackDate('Lactating');
+          const diffTime = Math.abs(now - lacDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return (
+            <div className="flex flex-col">
+              <span className="font-bold text-success">Lactating: {diffDays}d</span>
+              <span className="text-[10px] text-textSecondary">Wean due: {Math.max(0, 60 - diffDays)}d</span>
+            </div>
+          );
         }
 
         // 5. Dead / Culled / Sold
         if (val === 'Dead' || val === 'Culled' || val === 'Sold') {
-          const lastStatus = row.statusHistory?.filter(h => h.newStatus === val)?.pop();
-          const dateStr = lastStatus ? new Date(lastStatus.updatedAt).toLocaleDateString() : (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'N/A');
+          const eventDate = getFallbackDate(val);
           return (
             <div className="flex flex-col">
               <span className="font-semibold text-danger">{val} Event</span>
-              <span className="text-[10px] text-textSecondary">Date: {dateStr}</span>
+              <span className="text-[10px] text-textSecondary">Date: {eventDate.toLocaleDateString()}</span>
             </div>
           );
         }
 
         // 6. Active / Normal - Next Heat cycle monitoring
-        if (row.lastHeatDate) {
-          const nextHeat = new Date(new Date(row.lastHeatDate).getTime() + (21 * 24 * 60 * 60 * 1000));
+        const heatDate = row.lastHeatDate ? new Date(row.lastHeatDate) : (row.statusHistory?.filter(h => h.newStatus === 'In Heat')?.pop() ? getFallbackDate('In Heat') : null);
+        if (heatDate) {
+          const nextHeat = new Date(heatDate.getTime() + (21 * 24 * 60 * 60 * 1000));
           const diffTime = nextHeat - now;
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           

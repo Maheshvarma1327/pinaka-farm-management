@@ -655,6 +655,56 @@ export const useSowStore = create((set, get) => ({
           const previousStatus = updated.status;
           updated.status = status;
           
+          // Align internal date fields depending on the target status
+          if (status === 'In Heat') {
+            updated.lastHeatDate = new Date().toISOString().split('T')[0];
+            updated.heatHistory = [
+              ...(updated.heatHistory || []),
+              {
+                _id: `h_${Date.now()}`,
+                heatNumber: (updated.heatHistory?.length || 0) + 1,
+                heatDate: updated.lastHeatDate,
+                expectedNextHeat: new Date(Date.now() + (21 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+                durationHours: 24,
+                status: 'In Heat',
+                notes: notes || 'Direct status transition to In Heat.',
+                enteredBy: enteredBy || 'System'
+              }
+            ];
+          } else if (status === 'Pregnancy Pending') {
+            updated.pregnancyStatus = 'Pending Confirmation';
+            updated.lastServiceDate = new Date().toISOString().split('T')[0];
+            updated.expectedFarrowingDate = new Date(Date.now() + (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+          } else if (status === 'Pregnant') {
+            updated.pregnancyStatus = 'Pregnant';
+            if (!updated.lastServiceDate) {
+              updated.lastServiceDate = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]; // seed 30 days ago to show progress
+            }
+            updated.expectedFarrowingDate = new Date(new Date(updated.lastServiceDate).getTime() + (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+          } else if (status === 'Lactating') {
+            updated.pregnancyStatus = 'Not Pregnant';
+            updated.expectedFarrowingDate = '';
+            updated.farrowingHistory = [
+              ...(updated.farrowingHistory || []),
+              {
+                _id: `f_${Date.now()}`,
+                parity: (updated.farrowingHistory?.length || 0) + 1,
+                farrowingDate: new Date().toISOString().split('T')[0],
+                bornAlive: 10,
+                bornDead: 0,
+                stillborn: 0,
+                mummified: 0,
+                litterWeight: 15,
+                weaningCount: 0,
+                weaningWeight: 0
+              }
+            ];
+            updated.parityCount = updated.farrowingHistory.length;
+          } else if (status === 'Active') {
+            updated.pregnancyStatus = 'Not Pregnant';
+            updated.expectedFarrowingDate = '';
+          }
+
           updated.statusHistory = [
             ...(updated.statusHistory || []),
             {
