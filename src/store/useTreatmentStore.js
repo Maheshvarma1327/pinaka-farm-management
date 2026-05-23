@@ -70,6 +70,18 @@ export const useTreatmentStore = create((set, get) => ({
 
       const updatedList = [newRecord, ...list];
       saveLocalTreatments(updatedList);
+
+      // Sync: Deduct stock from Medicine Store
+      if (data.medicineId && data.doseQuantity) {
+        try {
+          const { useMedicineStore } = await import('./useMedicineStore');
+          const medStore = useMedicineStore.getState();
+          await medStore.deductStock(data.medicineId, data.doseQuantity);
+        } catch (err) {
+          console.error("Failed to deduct medicine stock:", err);
+        }
+      }
+
       set({ treatments: updatedList, loading: false });
       return newRecord;
     } catch (err) {

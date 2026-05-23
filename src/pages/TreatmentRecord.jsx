@@ -1,23 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useTreatmentStore } from '../store/useTreatmentStore';
+import { useMedicineStore } from '../store/useMedicineStore';
 import DataTable from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
 import Modal from '../components/ui/Modal';
+import DatePicker from '../components/ui/DatePicker';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
 import { Stethoscope, Plus, Activity, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
 export default function TreatmentRecord() {
   const { treatments, loading, fetchTreatments, registerTreatment, updateTreatmentStatus } = useTreatmentStore();
+  const { medicines, fetchMedicines } = useMedicineStore();
+  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     animalId: '', animalType: 'Grower', symptoms: '',
     diagnosis: '', treatmentDetails: '', vetName: '',
-    startDate: '', followUpDate: '', recoveryStatus: 'Under Observation', notes: ''
+    startDate: new Date().toISOString().split('T')[0], 
+    followUpDate: '', recoveryStatus: 'Under Observation', notes: '',
+    medicineId: '', doseQuantity: ''
   });
 
-  useEffect(() => { fetchTreatments(); }, [fetchTreatments]);
+  useEffect(() => { 
+    fetchTreatments(); 
+    fetchMedicines();
+  }, [fetchTreatments, fetchMedicines]);
 
   const kpis = useMemo(() => ({
     total: treatments.length,
@@ -63,8 +72,23 @@ export default function TreatmentRecord() {
     try {
       await registerTreatment({ ...formData, operator: 'System' });
       setIsAddModalOpen(false);
-      setFormData({ animalId: '', animalType: 'Grower', symptoms: '', diagnosis: '', treatmentDetails: '', vetName: '', startDate: '', followUpDate: '', recoveryStatus: 'Under Observation', notes: '' });
-    } catch (err) { alert(err.message); }
+      setFormData({
+        animalId: '',
+        animalType: 'Grower',
+        symptoms: '',
+        diagnosis: '',
+        treatmentDetails: '',
+        vetName: '',
+        startDate: new Date().toISOString().split('T')[0],
+        followUpDate: '',
+        recoveryStatus: 'Under Observation',
+        notes: '',
+        medicineId: '',
+        doseQuantity: ''
+      });
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (
@@ -126,6 +150,7 @@ export default function TreatmentRecord() {
               </FormField>
             </FormGrid>
           </FormSection>
+
           <FormSection title="Clinical Information">
             <FormField label="Symptoms Observed" required id="symptoms">
               <textarea id="symptoms" required rows={2} className="input-field resize-none" placeholder="Describe observed symptoms..." value={formData.symptoms} onChange={e => setFormData({ ...formData, symptoms: e.target.value })} />
@@ -142,13 +167,46 @@ export default function TreatmentRecord() {
               <textarea id="treatmentDetails" required rows={2} className="input-field resize-none" placeholder="Treatment administered..." value={formData.treatmentDetails} onChange={e => setFormData({ ...formData, treatmentDetails: e.target.value })} />
             </FormField>
           </FormSection>
+
+          <FormSection title="Medication Administered (Optional)">
+            <FormGrid cols={2}>
+              <FormField label="Medicine / Vaccine" id="medicineId">
+                <select id="medicineId" className="input-field" value={formData.medicineId} onChange={e => setFormData({ ...formData, medicineId: e.target.value })}>
+                  <option value="">-- Select Medicine (Optional) --</option>
+                  {medicines.map(m => (
+                    <option key={m._id} value={m._id || m.medicineId}>
+                      {m.name} ({m.type}) - Stock: {m.remainingStock} {m.unit}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Dose / Quantity Administered" id="doseQuantity">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="doseQuantity"
+                    type="number"
+                    min="0"
+                    step="any"
+                    className="input-field"
+                    placeholder="e.g. 10"
+                    value={formData.doseQuantity}
+                    onChange={e => setFormData({ ...formData, doseQuantity: e.target.value })}
+                  />
+                  <span className="text-textSecondary text-xs">
+                    {formData.medicineId ? (medicines.find(m => (m._id === formData.medicineId || m.medicineId === formData.medicineId))?.unit || '') : ''}
+                  </span>
+                </div>
+              </FormField>
+            </FormGrid>
+          </FormSection>
+
           <FormSection title="Timeline & Status">
             <FormGrid cols={3}>
               <FormField label="Start Date" required id="startDate">
-                <input id="startDate" type="date" required className="input-field" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
+                <DatePicker value={formData.startDate} onChange={date => setFormData({ ...formData, startDate: date })} required className="input-field" />
               </FormField>
               <FormField label="Follow-Up Date" id="followUpDate">
-                <input id="followUpDate" type="date" className="input-field" value={formData.followUpDate} onChange={e => setFormData({ ...formData, followUpDate: e.target.value })} />
+                <DatePicker value={formData.followUpDate} onChange={date => setFormData({ ...formData, followUpDate: date })} placeholder="Select follow-up date" className="input-field" />
               </FormField>
               <FormField label="Recovery Status" required id="recoveryStatus">
                 <select id="recoveryStatus" className="input-field" value={formData.recoveryStatus} onChange={e => setFormData({ ...formData, recoveryStatus: e.target.value })}>
@@ -157,6 +215,7 @@ export default function TreatmentRecord() {
               </FormField>
             </FormGrid>
           </FormSection>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-borderDark">
             <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-xs font-bold text-textSecondary hover:text-textPrimary transition-colors">Cancel</button>
             <button type="submit" className="btn-primary py-2 px-6">Log Treatment</button>

@@ -77,5 +77,29 @@ export const useMedicineStore = create((set, get) => ({
       set({ error: err.message, loading: false });
       throw err;
     }
+  },
+
+  deductStock: async (id, quantity) => {
+    try {
+      const list = loadLocalMedicines();
+      const updatedList = list.map(m => {
+        if (m._id === id || m.medicineId === id || m.name === id) {
+          const qty = Number(quantity);
+          const usedQuantity = (m.usedQuantity || 0) + qty;
+          const remainingStock = Math.max(0, (m.totalQuantity || 0) - usedQuantity);
+          return {
+            ...m,
+            usedQuantity,
+            remainingStock,
+            status: remainingStock <= 0 ? 'Out of Stock' : (remainingStock < 100 ? 'Low Stock' : 'Available')
+          };
+        }
+        return m;
+      });
+      saveLocalMedicines(updatedList);
+      set({ medicines: updatedList });
+    } catch (e) {
+      console.error("Deduct stock failed:", e);
+    }
   }
 }));

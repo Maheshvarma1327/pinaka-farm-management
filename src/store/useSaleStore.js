@@ -82,6 +82,51 @@ export const useSaleStore = create((set, get) => ({
         });
       }
 
+      // Sync with Sow Store
+      try {
+        const { useSowStore } = await import('./useSowStore');
+        const sowStore = useSowStore.getState();
+        const targetSow = sowStore.sows.find(s => s.animalNo === data.animalId);
+        if (targetSow) {
+          const sowsList = JSON.parse(localStorage.getItem('pinaka_sows') || '[]');
+          const updatedSows = sowsList.map(s => s._id === targetSow._id ? { ...s, status: 'Sold', pregnancyStatus: 'Not Pregnant' } : s);
+          localStorage.setItem('pinaka_sows', JSON.stringify(updatedSows));
+          await sowStore.fetchSows();
+        }
+      } catch (err) {
+        console.error("Sale Sow sync failed:", err);
+      }
+
+      // Sync with Boar Store
+      try {
+        const { useBoarStore } = await import('./useBoarStore');
+        const boarStore = useBoarStore.getState();
+        const targetBoar = boarStore.boars.find(b => b.animalNo === data.animalId);
+        if (targetBoar) {
+          const boarsList = JSON.parse(localStorage.getItem('pinaka_boars') || '[]');
+          const updatedBoars = boarsList.map(b => b._id === targetBoar._id ? { ...b, status: 'Sold', breedingStatus: 'Inactive' } : b);
+          localStorage.setItem('pinaka_boars', JSON.stringify(updatedBoars));
+          await boarStore.fetchBoars();
+        }
+      } catch (err) {
+        console.error("Sale Boar sync failed:", err);
+      }
+
+      // Sync with Grower Store
+      try {
+        const { useGrowerStore } = await import('./useGrowerStore');
+        const growerStore = useGrowerStore.getState();
+        const targetGrower = growerStore.growers.find(g => g.animalNo === data.animalId);
+        if (targetGrower) {
+          const growersList = JSON.parse(localStorage.getItem('pinaka_growers') || '[]');
+          const updatedGrowers = growersList.map(g => g._id === targetGrower._id ? { ...g, status: 'Sold' } : g);
+          localStorage.setItem('pinaka_growers', JSON.stringify(updatedGrowers));
+          await growerStore.fetchGrowers();
+        }
+      } catch (err) {
+        console.error("Sale Grower sync failed:", err);
+      }
+
       // Sync: Auto-create income entry in CashBook
       const cashStore = useCashBookStore.getState();
       if (cashStore && cashStore.addTransaction) {
