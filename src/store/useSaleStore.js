@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { useAnimalStore } from './useAnimalStore';
-import { useCashBookStore } from './useCashBookStore';
 
 const MOCK_SALES = [
   {
@@ -125,23 +124,6 @@ export const useSaleStore = create((set, get) => ({
         }
       } catch (err) {
         console.error("Sale Grower sync failed:", err);
-      }
-
-      // Sync: Auto-create income entry in CashBook
-      const cashStore = useCashBookStore.getState();
-      if (cashStore && cashStore.addTransaction) {
-        await cashStore.addTransaction({
-          date: data.saleDate,
-          type: 'Income',
-          category: 'Animal Sale',
-          description: `Sale of ${data.animalType} ${data.animalId} to ${data.buyerName}`,
-          amount: totalAmount,
-          paymentMethod: data.paymentMethod || 'Cash',
-          referenceModule: 'Sale',
-          referenceId: newRecord.saleId,
-          remarks: data.remarks || '',
-          operator: data.operator || 'System'
-        });
       }
 
       set({ sales: updatedList, loading: false });

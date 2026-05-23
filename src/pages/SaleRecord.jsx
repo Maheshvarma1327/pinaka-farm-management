@@ -6,6 +6,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
 import Modal from '../components/ui/Modal';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
+import AnimalSelect from '../components/ui/AnimalSelect';
 import { DollarSign, Plus, TrendingUp, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function SaleRecord() {
@@ -133,7 +134,21 @@ export default function SaleRecord() {
           <FormSection title="Animal Details">
             <FormGrid cols={2}>
               <FormField label="Animal ID" required id="saleAnimalId">
-                <input id="saleAnimalId" type="text" required className="input-field font-mono" placeholder="e.g. G-101" value={formData.animalId} onChange={e => setFormData({ ...formData, animalId: e.target.value.toUpperCase() })} />
+                <AnimalSelect
+                  value={formData.animalId}
+                  onChange={val => setFormData({ ...formData, animalId: val })}
+                  onSelectFull={(animal) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      animalId: animal.animalNo,
+                      animalType: animal.lifecycleStage || prev.animalType,
+                      sex: animal.sex || prev.sex,
+                      weight: animal.currentWeight || prev.weight
+                    }));
+                  }}
+                  filterActive={true}
+                  required
+                />
               </FormField>
               <FormField label="Animal Type" required id="saleAnimalType">
                 <select id="saleAnimalType" className="input-field" value={formData.animalType} onChange={e => setFormData({ ...formData, animalType: e.target.value })}>

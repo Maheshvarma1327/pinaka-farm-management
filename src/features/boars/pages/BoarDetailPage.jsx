@@ -482,7 +482,7 @@ export default function BoarDetailPage() {
               </div>
             )}
 
-            {canEdit && (
+            {canEdit && !isInactive && (
               <button
                 onClick={handleOpenEditDetails}
                 className="px-3 py-2 bg-primary hover:bg-primary-dark text-black text-xs font-bold rounded shadow-md hover:shadow-glow transition-all flex items-center gap-1.5 uppercase tracking-wider"

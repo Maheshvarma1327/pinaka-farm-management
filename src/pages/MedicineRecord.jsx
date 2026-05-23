@@ -4,12 +4,14 @@ import { useMedicineStore } from '../store/useMedicineStore';
 import { useSowStore } from '../store/useSowStore';
 import { useBoarStore } from '../store/useBoarStore';
 import { useGrowerStore } from '../store/useGrowerStore';
+import { useFarrowingStore } from '../store/useFarrowingStore';
 import DataTable from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
 import Modal from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
+import AnimalSelect from '../components/ui/AnimalSelect';
 import { Pill, Plus, Clipboard, CheckCircle, Clock, AlertCircle, Search, Trash2, Heart, User, Filter, Calendar } from 'lucide-react';
 
 export default function MedicineRecord() {
@@ -17,6 +19,7 @@ export default function MedicineRecord() {
   const { sows, fetchSows } = useSowStore();
   const { boars, fetchBoars } = useBoarStore();
   const { growers, fetchGrowers } = useGrowerStore();
+  const { farrowings, fetchFarrowings } = useFarrowingStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [animalSearchTerm, setAnimalSearchTerm] = useState('');
@@ -41,9 +44,10 @@ export default function MedicineRecord() {
     fetchSows();
     fetchBoars();
     fetchGrowers();
-  }, [fetchMedicines, fetchSows, fetchBoars, fetchGrowers]);
+    fetchFarrowings();
+  }, [fetchMedicines, fetchSows, fetchBoars, fetchGrowers, fetchFarrowings]);
 
-  // Aggregate all registered animals from three source stores
+  // Aggregate all registered animals from Sow, Boar, Grower, and active Piglet stores
   const allAnimals = useMemo(() => {
     const list = [];
     sows.forEach(s => {
@@ -82,8 +86,29 @@ export default function MedicineRecord() {
         sex: g.sex || 'Male'
       });
     });
+    // Include active piglets from all farrowing litters
+    farrowings.forEach(f => {
+      (f.piglets || []).forEach(p => {
+        if (p.status === 'Nursing' && !p.promotedToGrower) {
+          const dob = p.dob || f.actualFarrowingDate;
+          const ageMs = Date.now() - new Date(dob).getTime();
+          const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+          list.push({
+            _id: p.pigletId,
+            animalNo: p.pigletId,
+            animalType: 'Piglet',
+            breed: p.breed || 'Crossbred',
+            status: 'Nursing',
+            penNo: 'Farrowing Unit',
+            age: `${ageDays} days`,
+            sex: p.sex || 'Unknown',
+            litterId: f._id
+          });
+        }
+      });
+    });
     return list;
-  }, [sows, boars, growers]);
+  }, [sows, boars, growers, farrowings]);
 
   // Handle animal search list
   const filteredAnimalsForSelect = useMemo(() => {
@@ -340,52 +365,38 @@ export default function MedicineRecord() {
           
           {/* SECTION 1 - SELECT ANIMAL */}
           <FormSection title="Section 1 — Select Registered Animal">
-            <div className="relative">
-              <span className="text-[10px] text-textSecondary uppercase font-bold block mb-1">Search Animal Registry (Sow, Boar, Grower)</span>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    className="input-field font-mono pr-8 text-xs placeholder:text-[10.5px]"
-                    placeholder="Search by tag, breed, type..."
-                    value={animalSearchTerm}
-                    onChange={e => setAnimalSearchTerm(e.target.value)}
-                  />
-                  <Search className="w-3.5 h-3.5 absolute right-2.5 top-2.5 text-textSecondary" />
-                </div>
-              </div>
-              
-              {/* Dropdown lookup list */}
-              {animalSearchTerm && (
-                <div className="absolute left-0 right-0 mt-1 bg-sidebar border border-borderDark rounded-lg shadow-xl z-50 overflow-hidden max-h-[160px] overflow-y-auto">
-                  {filteredAnimalsForSelect.length === 0 ? (
-                    <div className="py-3 text-center text-xs text-textSecondary">No matching registered pig found.</div>
-                  ) : (
-                    filteredAnimalsForSelect.map(animal => (
-                      <button
-                        type="button"
-                        key={animal._id}
-                        onClick={() => handleSelectAnimal(animal)}
-                        className="w-full text-left p-2.5 hover:bg-cardHover border-b border-borderDark/40 flex items-center justify-between text-xs text-textSecondary hover:text-textPrimary"
-                      >
-                        <span className="font-bold font-mono text-primary">{animal.animalNo}</span>
-                        <span className="font-semibold">{animal.animalType} | {animal.breed} | Pen: {animal.penNo}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+            <FormField label="Search Animal Registry (Sow, Boar, Grower)" required>
+              <AnimalSelect
+                value={formData.animalId}
+                onChange={(val) => setFormData({ ...formData, animalId: val })}
+                onSelectFull={(animal) => {
+                  setSelectedAnimalObj(animal);
+                  setFormData(prev => ({
+                    ...prev,
+                    animalId: animal.animalNo,
+                    animalType: animal.lifecycleStage || 'Unknown',
+                    breed: animal.breed || 'Unknown',
+                    status: animal.operationalStatus || 'Active',
+                    penNo: animal.currentPen || 'Unknown',
+                    age: animal.dob ? `${Math.floor((new Date() - new Date(animal.dob)) / (1000 * 60 * 60 * 24 * 30))} mo` : 'N/A',
+                    sex: animal.sex || 'Unknown'
+                  }));
+                }}
+              />
+            </FormField>
 
             {selectedAnimalObj && (
               <div className="mt-3 bg-primary/5 p-3 border border-primary/20 rounded-lg flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
                   <Heart className="w-4 h-4 text-primary shrink-0 animate-pulse" />
                   <span className="text-textSecondary">
-                    Selected: <strong className="text-textPrimary font-mono">{selectedAnimalObj.animalNo}</strong> ({selectedAnimalObj.animalType} - {selectedAnimalObj.breed})
+                    Selected: <strong className="text-textPrimary font-mono">{selectedAnimalObj.animalNo}</strong> ({selectedAnimalObj.lifecycleStage || selectedAnimalObj.animalType} - {selectedAnimalObj.breed})
                   </span>
                 </div>
-                <button type="button" onClick={() => setSelectedAnimalObj(null)} className="text-[10px] text-danger hover:underline font-bold uppercase">Change</button>
+                <button type="button" onClick={() => {
+                  setSelectedAnimalObj(null);
+                  setFormData(prev => ({ ...prev, animalId: '' }));
+                }} className="text-[10px] text-danger hover:underline font-bold uppercase">Clear / Change</button>
               </div>
             )}
           </FormSection>

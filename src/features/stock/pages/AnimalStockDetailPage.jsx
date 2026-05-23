@@ -11,7 +11,8 @@ import {
   Tag,
   Calendar,
   Layers,
-  Activity
+  Activity,
+  Skull
 } from 'lucide-react';
 
 export default function AnimalStockDetailPage() {
@@ -54,6 +55,9 @@ export default function AnimalStockDetailPage() {
                 </h2>
                 <StatusBadge status={animal.operationalStatus} />
                 <StatusBadge status={animal.lifecycleStage} />
+                {animal.lifecycleStage === 'Dead' && (
+                  <Skull className="w-4.5 h-4.5 text-danger shrink-0 animate-pulse" title="Animal deceased — lifecycle closed" />
+                )}
               </div>
               <p className="text-[11px] text-textSecondary font-bold mt-1 tracking-wider uppercase">
                 Master Registry Profile

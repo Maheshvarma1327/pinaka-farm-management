@@ -10,6 +10,7 @@ import DataTable from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import Modal from '../components/ui/Modal';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
+import AnimalSelect from '../components/ui/AnimalSelect';
 import { TableSkeleton } from '../components/ui/LoadingSkeleton';
 import { 
   Plus, 
@@ -397,10 +398,20 @@ export default function FarrowingRecord() {
             <FormSection title="Breeding Details">
               <FormGrid cols={2}>
                 <FormField label="Sow Number / ID" required>
-                  <input type="text" value={formData.sowNo} onChange={(e) => setFormData({...formData, sowNo: e.target.value})} disabled={entryMethod === 'auto'} className="dense-input font-bold" />
+                  <AnimalSelect 
+                    value={formData.sowNo} 
+                    onChange={(val) => setFormData({...formData, sowNo: val})} 
+                    filterBySex="Female"
+                    disabled={entryMethod === 'auto'} 
+                  />
                 </FormField>
                 <FormField label="Boar Number / ID">
-                  <input type="text" value={formData.boarNo} onChange={(e) => setFormData({...formData, boarNo: e.target.value})} disabled={entryMethod === 'auto'} className="dense-input" />
+                  <AnimalSelect 
+                    value={formData.boarNo} 
+                    onChange={(val) => setFormData({...formData, boarNo: val})} 
+                    filterBySex="Male"
+                    disabled={entryMethod === 'auto'} 
+                  />
                 </FormField>
               </FormGrid>
               <FormGrid cols={2}>

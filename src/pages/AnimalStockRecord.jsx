@@ -16,7 +16,8 @@ import {
   Tag,
   Activity,
   Calendar,
-  Layers
+  Layers,
+  Skull
 } from 'lucide-react';
 
 export default function AnimalStockRecord() {
@@ -105,7 +106,14 @@ export default function AnimalStockRecord() {
       header: "Status", 
       accessor: "operationalStatus", 
       sortable: true,
-      render: (val) => <StatusBadge status={val} />
+      render: (val, row) => (
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={val} />
+          {row.lifecycleStage === 'Dead' && (
+            <Skull className="w-3.5 h-3.5 text-danger shrink-0 animate-pulse" title="Animal deceased — lifecycle closed" />
+          )}
+        </div>
+      )
     }
   ], [navigate]);
 

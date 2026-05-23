@@ -8,6 +8,7 @@ import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
 import Modal from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
+import AnimalSelect from '../components/ui/AnimalSelect';
 import { Stethoscope, Plus, Activity, AlertTriangle, CheckCircle, Clock, Search, Heart, Shield, RefreshCw } from 'lucide-react';
 
 export default function TreatmentRecord() {
@@ -280,7 +281,18 @@ export default function TreatmentRecord() {
           <FormSection title="Animal Identity & Timeline">
             <FormGrid cols={3}>
               <FormField label="Animal ID" required id="animalId">
-                <input id="animalId" type="text" required className="input-field font-mono" placeholder="e.g. S-101 or G-304" value={formData.animalId} onChange={e => setFormData({ ...formData, animalId: e.target.value.toUpperCase() })} />
+                <AnimalSelect
+                  value={formData.animalId}
+                  onChange={val => setFormData({ ...formData, animalId: val })}
+                  onSelectFull={(animal) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      animalId: animal.animalNo,
+                      animalType: animal.lifecycleStage || prev.animalType
+                    }));
+                  }}
+                  required
+                />
               </FormField>
               <FormField label="Animal Type" required id="animalType">
                 <select id="animalType" className="input-field" value={formData.animalType} onChange={e => setFormData({ ...formData, animalType: e.target.value })}>

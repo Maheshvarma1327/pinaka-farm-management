@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Award,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Skull
 } from 'lucide-react';
 
 export default function GrowerDetailPage() {
@@ -53,6 +54,13 @@ export default function GrowerDetailPage() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const [isPromoteOpen, setIsPromoteOpen] = useState(false);
+  const [isMortalityOpen, setIsMortalityOpen] = useState(false);
+  const [mortalityForm, setMortalityForm] = useState({
+    causeOfDeath: 'Disease',
+    postmortemFindings: '',
+    notes: '',
+    deathDate: new Date().toISOString().split('T')[0]
+  });
 
   // 2. Forms payload states
   const [selectedWeightLog, setSelectedWeightLog] = useState(null);
@@ -156,6 +164,37 @@ export default function GrowerDetailPage() {
     setIsEditDetailsOpen(true);
   };
 
+  const handleOpenMortality = () => {
+    setFormError('');
+    setMortalityForm({
+      causeOfDeath: 'Disease',
+      postmortemFindings: '',
+      notes: '',
+      deathDate: new Date().toISOString().split('T')[0]
+    });
+    setIsMortalityOpen(true);
+  };
+
+  const handleMortalitySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const { useMortalityStore } = await import('../../../store/useMortalityStore');
+      const recordMortality = useMortalityStore.getState().recordMortality;
+      await recordMortality({
+        animalId: selectedGrower.animalNo,
+        causeOfDeath: mortalityForm.causeOfDeath,
+        postmortemFindings: mortalityForm.postmortemFindings,
+        notes: mortalityForm.notes,
+        deathDate: mortalityForm.deathDate,
+        recordedBy: user?.name || 'System'
+      });
+      setIsMortalityOpen(false);
+      fetchGrowerById(id);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   // Submit operations
   const handleAddWeight = async (e) => {
     e.preventDefault();
@@ -222,6 +261,12 @@ export default function GrowerDetailPage() {
   const handleStatusChange = async (e) => {
     e.preventDefault();
     setFormError('');
+
+    if (statusData.status === 'Dead') {
+      setIsStatusOpen(false);
+      handleOpenMortality();
+      return;
+    }
 
     try {
       await updateStatusRecord(id, statusData.status, statusData.remarks, user?.name || 'System');
@@ -361,6 +406,7 @@ export default function GrowerDetailPage() {
   }
 
   const isPromoted = selectedGrower.status === 'Promoted to Sow' || selectedGrower.status === 'Promoted to Boar';
+  const isDead = selectedGrower.status === 'Dead';
 
   return (
     <MainLayout>
@@ -399,8 +445,9 @@ export default function GrowerDetailPage() {
             {canEdit && !isPromoted && (
               <button
                 onClick={() => setIsPromoteOpen(true)}
-                className="px-3.5 py-2 bg-success hover:bg-success-dark text-white text-xs font-bold rounded shadow-md hover:shadow-glow transition-all flex items-center gap-1.5 uppercase tracking-wider"
-                title={selectedGrower.sex === 'Female' ? "Promote female to Sow breeder records" : "Promote male to Boar breeder records"}
+                disabled={isDead}
+                className={`px-3.5 py-2 bg-success hover:bg-success-dark text-white text-xs font-bold rounded shadow-md hover:shadow-glow transition-all flex items-center gap-1.5 uppercase tracking-wider ${isDead ? 'opacity-40 cursor-not-allowed' : ''}`}
+                title={isDead ? "Animal deceased — lifecycle closed" : (selectedGrower.sex === 'Female' ? "Promote female to Sow breeder records" : "Promote male to Boar breeder records")}
               >
                 <Award className="w-3.5 h-3.5 stroke-[2.5]" />
                 {selectedGrower.sex === 'Female' ? 'Promote to Sow' : 'Promote to Boar'}
@@ -410,7 +457,9 @@ export default function GrowerDetailPage() {
             {canEdit && (
               <button
                 onClick={handleOpenEditDetails}
-                className="px-3.5 py-2 bg-primary hover:bg-primary-dark text-black text-xs font-bold rounded shadow-md hover:shadow-glow transition-all flex items-center gap-1.5 uppercase tracking-wider"
+                disabled={isDead}
+                className={`px-3.5 py-2 bg-primary hover:bg-primary-dark text-black text-xs font-bold rounded shadow-md hover:shadow-glow transition-all flex items-center gap-1.5 uppercase tracking-wider ${isDead ? 'opacity-40 cursor-not-allowed' : ''}`}
+                title={isDead ? "Animal deceased — lifecycle closed" : "Edit Details"}
               >
                 <Edit className="w-3.5 h-3.5" />
                 Edit Details
@@ -629,7 +678,9 @@ export default function GrowerDetailPage() {
                   {canEdit && !isPromoted && (
                     <button
                       onClick={handleOpenAddWeight}
-                      className="px-2.5 py-1 bg-secondary text-textPrimary text-[10px] font-bold rounded hover:bg-primary hover:text-black transition-colors flex items-center gap-1 uppercase tracking-wider"
+                      disabled={isDead}
+                      className={`px-2.5 py-1 bg-secondary text-textPrimary text-[10px] font-bold rounded hover:bg-primary hover:text-black transition-colors flex items-center gap-1 uppercase tracking-wider ${isDead ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      title={isDead ? "Animal deceased — lifecycle closed" : "Update Weight"}
                     >
                       <Plus className="w-3.5 h-3.5 stroke-[3]" />
                       Update Weight
@@ -696,16 +747,18 @@ export default function GrowerDetailPage() {
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => handleOpenEditWeight(w)}
-                                    className="p-1 text-textSecondary hover:text-yellow-500 hover:bg-cardHover rounded"
-                                    title="Edit weight entry"
+                                    disabled={isDead}
+                                    className={`p-1 text-textSecondary hover:text-yellow-500 hover:bg-cardHover rounded ${isDead ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                    title={isDead ? "Animal deceased — lifecycle closed" : "Edit weight entry"}
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
                                   {w.type !== 'Birth' && (
                                     <button
                                       onClick={() => handleDeleteWeight(w._id)}
-                                      className="p-1 text-textSecondary hover:text-danger hover:bg-cardHover rounded"
-                                      title="Delete weight entry"
+                                      disabled={isDead}
+                                      className={`p-1 text-textSecondary hover:text-danger hover:bg-cardHover rounded ${isDead ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                      title={isDead ? "Animal deceased — lifecycle closed" : "Delete weight entry"}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -738,6 +791,12 @@ export default function GrowerDetailPage() {
                   <span className="text-textSecondary font-medium">Animal ID Tag</span>
                   <span className="font-extrabold text-primary font-mono">{selectedGrower.animalNo}</span>
                 </div>
+                {(selectedGrower.originalPigletId || selectedGrower.originPigletId) && (
+                  <div className="flex items-center justify-between border-b border-borderDark/20 pb-1.5">
+                    <span className="text-textSecondary font-medium">Origin Piglet ID</span>
+                    <span className="font-bold text-warning font-mono">{selectedGrower.originalPigletId || selectedGrower.originPigletId}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between border-b border-borderDark/20 pb-1.5">
                   <span className="text-textSecondary font-medium">Breed Type</span>
                   <span className="font-bold text-textPrimary">{selectedGrower.breed}</span>
@@ -758,7 +817,10 @@ export default function GrowerDetailPage() {
                   <span className="text-textSecondary font-medium">Current Status</span>
                   <div className="flex items-center gap-1.5">
                     <StatusBadge status={selectedGrower.status} />
-                    {canEdit && (
+                    {isDead && (
+                      <Skull className="w-3.5 h-3.5 text-danger shrink-0 animate-pulse" title="Animal deceased — lifecycle closed" />
+                    )}
+                    {canEdit && !isDead && (
                       <button 
                         onClick={handleOpenStatus}
                         className="text-[9px] text-primary hover:underline font-bold uppercase"
@@ -1248,6 +1310,98 @@ export default function GrowerDetailPage() {
               Warning: Once promoted, the sex assignment and identity details will be locked in the grower registries.
             </p>
           </div>
+        </Modal>
+
+        {/* ==============================================
+            MODAL 6: RECORD MORTALITY CONFIRMATION
+            ============================================== */}
+        <Modal
+          isOpen={isMortalityOpen}
+          onClose={() => setIsMortalityOpen(false)}
+          title={`Record Mortality — Grower ${selectedGrower.animalNo}`}
+          icon={<Skull className="w-5 h-5 text-danger" />}
+          footer={
+            <>
+              <button 
+                onClick={() => setIsMortalityOpen(false)}
+                className="px-4 py-2 hover:bg-cardBg border border-borderDark text-textSecondary text-xs rounded uppercase font-bold"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleMortalitySubmit}
+                className="px-4 py-2 bg-danger hover:bg-danger/80 text-white text-xs rounded uppercase font-bold shadow-md"
+              >
+                Record Mortality
+              </button>
+            </>
+          }
+        >
+          <form onSubmit={handleMortalitySubmit} className="flex flex-col gap-4 text-xs">
+            <FormSection title="Deceased Grower Logistics">
+              <FormGrid cols={2}>
+                <FormField label="Animal ID">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed font-mono font-bold text-primary" value={selectedGrower.animalNo || ''} readOnly />
+                </FormField>
+                <FormField label="Breed">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed" value={selectedGrower.breed || ''} readOnly />
+                </FormField>
+              </FormGrid>
+              <FormGrid cols={3}>
+                <FormField label="Sex">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed" value={selectedGrower.sex || ''} readOnly />
+                </FormField>
+                <FormField label="Lifecycle Stage">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed" value="Grower" readOnly />
+                </FormField>
+                <FormField label="Current Pen / Location">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed font-mono text-[10.5px]" value={selectedGrower.penNo || ''} readOnly />
+                </FormField>
+              </FormGrid>
+            </FormSection>
+            
+            <FormSection title="Clinical Mortality Details">
+              <FormGrid cols={2}>
+                <FormField label="Cause Of Death" required>
+                  <select
+                    value={mortalityForm.causeOfDeath}
+                    onChange={(e) => setMortalityForm({ ...mortalityForm, causeOfDeath: e.target.value })}
+                    className="dense-select"
+                  >
+                    {['Disease', 'Respiratory Failure', 'Infection', 'Accident', 'Weak Birth', 'Injury', 'Unknown', 'Natural Causes', 'Euthanasia'].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Date Of Death" required>
+                  <input
+                    type="date"
+                    value={mortalityForm.deathDate}
+                    onChange={(e) => setMortalityForm({ ...mortalityForm, deathDate: e.target.value })}
+                    className="dense-input"
+                    required
+                  />
+                </FormField>
+              </FormGrid>
+              <FormField label="Postmortem Findings" required>
+                <input
+                  type="text"
+                  placeholder="e.g. Lungs congested, heart lesions"
+                  value={mortalityForm.postmortemFindings}
+                  onChange={(e) => setMortalityForm({ ...mortalityForm, postmortemFindings: e.target.value })}
+                  className="dense-input"
+                  required
+                />
+              </FormField>
+              <FormField label="Additional Description / Notes">
+                <textarea
+                  rows={2}
+                  placeholder="Enter any other specific observations regarding clinical treatment history or timeline..."
+                  value={mortalityForm.notes}
+                  onChange={(e) => setMortalityForm({ ...mortalityForm, notes: e.target.value })}
+                  className="dense-input w-full p-2"
+                />
+              </FormField>
+            </FormSection>
+          </form>
         </Modal>
 
       </div>

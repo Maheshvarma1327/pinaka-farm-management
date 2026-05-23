@@ -6,6 +6,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
 import Modal from '../components/ui/Modal';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
+import AnimalSelect from '../components/ui/AnimalSelect';
 import { Skull, Plus, TrendingDown, AlertTriangle, Calendar } from 'lucide-react';
 
 export default function MortalityRecord() {
@@ -13,7 +14,7 @@ export default function MortalityRecord() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     animalId: '', lifecycleStage: 'Grower', penNumber: '', sex: 'Male',
-    causeOfDeath: '', postmortemFindings: '', dateOfDeath: '', notes: ''
+    causeOfDeath: '', postmortemFindings: '', deathDate: '', notes: ''
   });
 
   useEffect(() => { fetchMortalities(); }, [fetchMortalities]);
@@ -24,7 +25,7 @@ export default function MortalityRecord() {
       return acc;
     }, {});
     const thisMonth = mortalities.filter(m => {
-      const d = new Date(m.dateOfDeath);
+      const d = new Date(m.deathDate);
       const now = new Date();
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length;
@@ -41,23 +42,31 @@ export default function MortalityRecord() {
       render: (val, row) => (
         <div className="flex flex-col">
           <span className="font-bold text-textPrimary text-[11px]">{val}</span>
-          <span className="text-[10px] text-textSecondary">{row.lifecycleStage} · {row.sex}</span>
+          <span className="text-[10px] text-textSecondary">{row.lifecycleStage} · {row.sex} ({row.breed || '—'})</span>
         </div>
       )
     },
+    {
+      header: "Source Module", accessor: "sourceModule", sortable: true,
+      render: (val) => <span className="px-2 py-0.5 rounded bg-sidebar border border-borderDark text-[10px] uppercase font-bold text-textSecondary">{val || 'Manual Entry'}</span>
+    },
     { header: "Pen", accessor: "penNumber", render: (val) => <span className="text-[11px] text-textSecondary">{val || '—'}</span> },
     {
-      header: "Cause of Death", accessor: "causeOfDeath",
+      header: "Cause of Death", accessor: "causeOfDeath", sortable: true,
       render: (val) => <span className="font-bold text-[11px] text-warning">{val}</span>
     },
     {
       header: "Postmortem", accessor: "postmortemFindings",
-      render: (val) => <span className="text-[11px] text-textSecondary truncate max-w-[150px] block">{val || '—'}</span>
+      render: (val) => <span className="text-[11px] text-textSecondary truncate max-w-[150px] block" title={val}>{val || '—'}</span>
     },
     {
-      header: "Date of Death", accessor: "dateOfDeath", sortable: true,
-      render: (val) => <span className="text-[11px] text-textSecondary">{val ? new Date(val).toLocaleDateString() : 'N/A'}</span>
+      header: "Date of Death", accessor: "deathDate", sortable: true,
+      render: (val) => <span className="text-[11px] text-textSecondary font-mono">{val ? new Date(val).toLocaleDateString() : 'N/A'}</span>
     },
+    {
+      header: "Recorded By", accessor: "recordedBy", sortable: true,
+      render: (val) => <span className="text-[11px] text-textSecondary font-semibold">{val || 'System'}</span>
+    }
   ], []);
 
   const handleAdd = async (e) => {
@@ -65,7 +74,7 @@ export default function MortalityRecord() {
     try {
       await recordMortality({ ...formData, operator: 'System' });
       setIsAddModalOpen(false);
-      setFormData({ animalId: '', lifecycleStage: 'Grower', penNumber: '', sex: 'Male', causeOfDeath: '', postmortemFindings: '', dateOfDeath: '', notes: '' });
+      setFormData({ animalId: '', lifecycleStage: 'Grower', penNumber: '', sex: 'Male', causeOfDeath: '', postmortemFindings: '', deathDate: '', notes: '' });
     } catch (err) { alert(err.message); }
   };
 
@@ -139,7 +148,21 @@ export default function MortalityRecord() {
           <FormSection title="Animal Identity">
             <FormGrid cols={2}>
               <FormField label="Animal ID" required id="mortAnimalId">
-                <input id="mortAnimalId" type="text" required className="input-field font-mono" placeholder="e.g. G-101 or S-204" value={formData.animalId} onChange={e => setFormData({ ...formData, animalId: e.target.value.toUpperCase() })} />
+                <AnimalSelect
+                  value={formData.animalId}
+                  onChange={val => setFormData({ ...formData, animalId: val })}
+                  onSelectFull={(animal) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      animalId: animal.animalNo,
+                      lifecycleStage: animal.lifecycleStage || prev.lifecycleStage,
+                      penNumber: animal.currentPen || prev.penNumber,
+                      sex: animal.sex || prev.sex
+                    }));
+                  }}
+                  filterActive={true}
+                  required
+                />
               </FormField>
               <FormField label="Lifecycle Stage" required id="mortStage">
                 <select id="mortStage" className="input-field" value={formData.lifecycleStage} onChange={e => setFormData({ ...formData, lifecycleStage: e.target.value })}>
@@ -160,8 +183,8 @@ export default function MortalityRecord() {
           </FormSection>
           <FormSection title="Mortality Details">
             <FormGrid cols={2}>
-              <FormField label="Date of Death" required id="dateOfDeath">
-                <input id="dateOfDeath" type="date" required className="input-field" value={formData.dateOfDeath} onChange={e => setFormData({ ...formData, dateOfDeath: e.target.value })} />
+              <FormField label="Date of Death" required id="deathDate">
+                <input id="deathDate" type="date" required className="input-field" value={formData.deathDate} onChange={e => setFormData({ ...formData, deathDate: e.target.value })} />
               </FormField>
               <FormField label="Cause of Death" required id="causeOfDeath">
                 <input id="causeOfDeath" type="text" required className="input-field" placeholder="e.g. Respiratory Disease" value={formData.causeOfDeath} onChange={e => setFormData({ ...formData, causeOfDeath: e.target.value })} />

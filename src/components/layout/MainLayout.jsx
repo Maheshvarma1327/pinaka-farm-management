@@ -107,11 +107,9 @@ export default function MainLayout({ children }) {
       ]
     },
     {
-      groupName: 'Business & Reports',
+      groupName: 'Commercial',
       items: [
-        { name: 'Sale Register', path: '/sales', icon: DollarSign },
-        { name: 'Reports', path: '/reports', icon: BarChart3 },
-        { name: 'Cash Book', path: '/cashbook', icon: Wallet }
+        { name: 'Sale Register', path: '/sales', icon: DollarSign }
       ]
     },
     {

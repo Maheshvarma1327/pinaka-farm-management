@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useGrowerStore } from './useGrowerStore';
+import { useSettingsStore } from './useSettingsStore';
 
 const MOCK_SEED_SOWS = [
   {
@@ -331,7 +332,7 @@ export const useSowStore = create((set, get) => ({
     try {
       const list = loadLocalSows();
       
-      const newNextHeat = new Date(new Date(heatData.date).getTime() + (21 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+      const newNextHeat = useSettingsStore.getState().calculateDate(heatData.date, 'heatCycle').split('T')[0];
 
       const updatedList = list.map(s => {
         if (s._id === id) {
@@ -392,7 +393,7 @@ export const useSowStore = create((set, get) => ({
     try {
       const list = loadLocalSows();
       const serviceDateStr = breedingData.serviceDate || new Date().toISOString().split('T')[0];
-      const estFarrowing = new Date(new Date(serviceDateStr).getTime() + (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+      const estFarrowing = useSettingsStore.getState().calculateDate(serviceDateStr, 'gestation').split('T')[0];
 
       const updatedList = list.map(s => {
         if (s._id === id) {
@@ -664,7 +665,7 @@ export const useSowStore = create((set, get) => ({
                 _id: `h_${Date.now()}`,
                 heatNumber: (updated.heatHistory?.length || 0) + 1,
                 heatDate: updated.lastHeatDate,
-                expectedNextHeat: new Date(Date.now() + (21 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+                expectedNextHeat: useSettingsStore.getState().calculateDate(new Date().toISOString(), 'heatCycle').split('T')[0],
                 durationHours: 24,
                 status: 'In Heat',
                 notes: notes || 'Direct status transition to In Heat.',
@@ -674,13 +675,13 @@ export const useSowStore = create((set, get) => ({
           } else if (status === 'Pregnancy Pending') {
             updated.pregnancyStatus = 'Pending Confirmation';
             updated.lastServiceDate = new Date().toISOString().split('T')[0];
-            updated.expectedFarrowingDate = new Date(Date.now() + (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+            updated.expectedFarrowingDate = useSettingsStore.getState().calculateDate(new Date().toISOString(), 'gestation').split('T')[0];
           } else if (status === 'Pregnant') {
             updated.pregnancyStatus = 'Pregnant';
             if (!updated.lastServiceDate) {
               updated.lastServiceDate = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]; // seed 30 days ago to show progress
             }
-            updated.expectedFarrowingDate = new Date(new Date(updated.lastServiceDate).getTime() + (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+            updated.expectedFarrowingDate = useSettingsStore.getState().calculateDate(updated.lastServiceDate, 'gestation').split('T')[0];
           } else if (status === 'Lactating') {
             updated.pregnancyStatus = 'Not Pregnant';
             updated.expectedFarrowingDate = '';
@@ -806,7 +807,7 @@ export const useSowStore = create((set, get) => ({
     list.forEach(s => {
       // 1. Upcoming and Overdue checks
       if (s.lastHeatDate && s.status !== 'In Heat' && s.pregnancyStatus !== 'Pregnant') {
-        const nextExpectedHeat = new Date(new Date(s.lastHeatDate).getTime() + (21 * 24 * 60 * 60 * 1000));
+        const nextExpectedHeat = new Date(useSettingsStore.getState().calculateDate(s.lastHeatDate, 'heatCycle'));
         const diffTime = nextExpectedHeat - now;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 

@@ -6,15 +6,17 @@ const MOCK_MORTALITIES = [
     _id: "mort_1",
     mortalityId: "MORT-001",
     animalId: "G-101-1111-5",
-    lifecycleStage: "Grower",
-    penNumber: "Fattening House - Pen 03",
-    ageAtDeath: 120,
+    sourceModule: "Grower Record",
+    animalType: "Grower",
+    breed: "Duroc",
     sex: "Male",
+    penNumber: "Fattening House - Pen 03",
+    lifecycleStage: "Grower",
     causeOfDeath: "Respiratory Disease",
     postmortemFindings: "Lungs congested, suspected PRRS",
-    dateOfDeath: "2026-05-10T00:00:00.000Z",
-    operator: "Dr. Alistair",
     notes: "Isolated from herd 2 days prior.",
+    deathDate: "2026-05-10",
+    recordedBy: "Dr. Alistair",
     createdAt: "2026-05-10T11:00:00.000Z",
     isDeleted: false
   }
@@ -23,8 +25,11 @@ const MOCK_MORTALITIES = [
 const loadLocalMortalities = () => {
   const stored = localStorage.getItem('pinaka_mortalities');
   if (stored) {
-    try { return JSON.parse(stored).filter(m => !m.isDeleted); }
-    catch (e) { console.error("Decode failure:", e); }
+    try {
+      return JSON.parse(stored).filter(m => !m.isDeleted);
+    } catch (e) {
+      console.error("Decode failure:", e);
+    }
   }
   localStorage.setItem('pinaka_mortalities', JSON.stringify(MOCK_MORTALITIES));
   return MOCK_MORTALITIES;
@@ -53,35 +58,152 @@ export const useMortalityStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const list = loadLocalMortalities();
+      
+      // 1. Prevent duplicate mortality entries for same animal
+      const exists = list.some(m => m.animalId.toUpperCase() === data.animalId.toUpperCase());
+      if (exists) {
+        throw new Error(`A mortality record already exists for animal '${data.animalId}'.`);
+      }
+
+      // 2. Query registries to auto-fill metadata
+      let breed = data.breed || 'Crossbred';
+      let sex = data.sex || 'Female';
+      let penNumber = data.penNumber || '—';
+      let lifecycleStage = data.lifecycleStage || 'Grower';
+      let animalType = data.animalType || 'Grower';
+      let sourceModule = data.sourceModule || 'Animal Registry';
+
+      // Scan Grower
+      try {
+        const growers = JSON.parse(localStorage.getItem('pinaka_growers') || '[]');
+        const match = growers.find(g => g.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (match) {
+          breed = match.breed;
+          sex = match.sex;
+          penNumber = match.penNo;
+          lifecycleStage = 'Grower';
+          animalType = 'Grower';
+          sourceModule = 'Grower Record';
+        }
+      } catch (e) {}
+
+      // Scan Sow
+      try {
+        const sows = JSON.parse(localStorage.getItem('pinaka_sows') || '[]');
+        const match = sows.find(s => s.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (match) {
+          breed = match.breed;
+          sex = 'Female';
+          penNumber = match.penNo;
+          lifecycleStage = 'Sow';
+          animalType = 'Sow';
+          sourceModule = 'Sow Record';
+        }
+      } catch (e) {}
+
+      // Scan Boar
+      try {
+        const boars = JSON.parse(localStorage.getItem('pinaka_boars') || '[]');
+        const match = boars.find(b => b.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (match) {
+          breed = match.breed;
+          sex = 'Male';
+          penNumber = match.penNo;
+          lifecycleStage = 'Boar';
+          animalType = 'Boar';
+          sourceModule = 'Boar Record';
+        }
+      } catch (e) {}
+
+      // Scan Piglet litters (Parity/Farrowing records)
+      try {
+        const farrowings = JSON.parse(localStorage.getItem('pinaka_farrowings') || '[]');
+        for (const f of farrowings) {
+          const piglet = (f.piglets || []).find(
+            p => (p.pigletId || '').toUpperCase() === data.animalId.toUpperCase()
+          );
+          if (piglet) {
+            breed = piglet.breed || 'Crossbred';
+            sex = piglet.sex || 'Unknown';
+            penNumber = 'Farrowing Unit';
+            lifecycleStage = 'Piglet';
+            animalType = 'Piglet';
+            sourceModule = 'Parity / Litter Record';
+            break;
+          }
+        }
+      } catch (e) {}
+
+      // Scan master Animals
+      try {
+        const animals = JSON.parse(localStorage.getItem('pinaka_animals') || '[]');
+        const match = animals.find(a => a.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (match) {
+          breed = match.breed || breed;
+          sex = match.sex || sex;
+          penNumber = match.currentPen || penNumber;
+          lifecycleStage = match.lifecycleStage || lifecycleStage;
+          animalType = match.lifecycleStage || animalType;
+        }
+      } catch (e) {}
+
       const newRecord = {
         _id: `mort_${Date.now()}`,
         mortalityId: `MORT-${Date.now().toString().slice(-4)}`,
-        ...data,
+        animalId: data.animalId.toUpperCase(),
+        sourceModule,
+        animalType,
+        breed,
+        sex,
+        penNumber,
+        lifecycleStage,
+        causeOfDeath: data.causeOfDeath || 'Disease',
+        postmortemFindings: data.postmortemFindings || '—',
+        notes: data.notes || '',
+        deathDate: data.deathDate || new Date().toISOString().split('T')[0],
+        recordedBy: data.recordedBy || 'System',
         createdAt: new Date().toISOString(),
         isDeleted: false
       };
+
       const updatedList = [newRecord, ...list];
       saveLocalMortalities(updatedList);
 
-      // Sync with Animal Store - mark animal as Dead
+      // 3. Sync with Animal Store - mark animal as Dead
       const animalStore = useAnimalStore.getState();
       const allAnimals = animalStore.animals;
-      const targetAnimal = allAnimals.find(a => a.animalNo === data.animalId);
+      const targetAnimal = allAnimals.find(a => a.animalNo.toUpperCase() === data.animalId.toUpperCase());
       if (targetAnimal && animalStore.updateAnimal) {
         await animalStore.updateAnimal(targetAnimal._id, {
           lifecycleStage: 'Dead',
           operationalStatus: 'Culled'
         });
+      } else {
+        // Direct local storage sync for Master Animals
+        try {
+          const animalsList = JSON.parse(localStorage.getItem('pinaka_animals') || '[]');
+          const updatedAnimals = animalsList.map(a => 
+            a.animalNo.toUpperCase() === data.animalId.toUpperCase() 
+              ? { ...a, lifecycleStage: 'Dead', operationalStatus: 'Culled' } 
+              : a
+          );
+          localStorage.setItem('pinaka_animals', JSON.stringify(updatedAnimals));
+          await animalStore.fetchAnimals();
+        } catch (e) {}
       }
 
-      // Sync with Sow Store
+      // 4. Sync with Sow Store
       try {
         const { useSowStore } = await import('./useSowStore');
         const sowStore = useSowStore.getState();
-        const targetSow = sowStore.sows.find(s => s.animalNo === data.animalId);
-        if (targetSow) {
+        const targetSow = sowStore.sows.find(s => s.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (targetSow || true) {
           const sowsList = JSON.parse(localStorage.getItem('pinaka_sows') || '[]');
-          const updatedSows = sowsList.map(s => s._id === targetSow._id ? { ...s, status: 'Dead', pregnancyStatus: 'Not Pregnant' } : s);
+          const updatedSows = sowsList.map(s => 
+            s.animalNo.toUpperCase() === data.animalId.toUpperCase() 
+              ? { ...s, status: 'Dead', pregnancyStatus: 'Not Pregnant' } 
+              : s
+          );
           localStorage.setItem('pinaka_sows', JSON.stringify(updatedSows));
           await sowStore.fetchSows();
         }
@@ -89,14 +211,18 @@ export const useMortalityStore = create((set, get) => ({
         console.error("Mortality Sow sync failed:", err);
       }
 
-      // Sync with Boar Store
+      // 5. Sync with Boar Store
       try {
         const { useBoarStore } = await import('./useBoarStore');
         const boarStore = useBoarStore.getState();
-        const targetBoar = boarStore.boars.find(b => b.animalNo === data.animalId);
-        if (targetBoar) {
+        const targetBoar = boarStore.boars.find(b => b.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (targetBoar || true) {
           const boarsList = JSON.parse(localStorage.getItem('pinaka_boars') || '[]');
-          const updatedBoars = boarsList.map(b => b._id === targetBoar._id ? { ...b, status: 'Dead', breedingStatus: 'Inactive' } : b);
+          const updatedBoars = boarsList.map(b => 
+            b.animalNo.toUpperCase() === data.animalId.toUpperCase() 
+              ? { ...b, status: 'Dead', breedingStatus: 'Inactive' } 
+              : b
+          );
           localStorage.setItem('pinaka_boars', JSON.stringify(updatedBoars));
           await boarStore.fetchBoars();
         }
@@ -104,14 +230,18 @@ export const useMortalityStore = create((set, get) => ({
         console.error("Mortality Boar sync failed:", err);
       }
 
-      // Sync with Grower Store
+      // 6. Sync with Grower Store
       try {
         const { useGrowerStore } = await import('./useGrowerStore');
         const growerStore = useGrowerStore.getState();
-        const targetGrower = growerStore.growers.find(g => g.animalNo === data.animalId);
-        if (targetGrower) {
+        const targetGrower = growerStore.growers.find(g => g.animalNo.toUpperCase() === data.animalId.toUpperCase());
+        if (targetGrower || true) {
           const growersList = JSON.parse(localStorage.getItem('pinaka_growers') || '[]');
-          const updatedGrowers = growersList.map(g => g._id === targetGrower._id ? { ...g, status: 'Dead' } : g);
+          const updatedGrowers = growersList.map(g => 
+            g.animalNo.toUpperCase() === data.animalId.toUpperCase() 
+              ? { ...g, status: 'Dead' } 
+              : g
+          );
           localStorage.setItem('pinaka_growers', JSON.stringify(updatedGrowers));
           await growerStore.fetchGrowers();
         }

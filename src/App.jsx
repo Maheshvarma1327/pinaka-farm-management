@@ -23,8 +23,7 @@ import TreatmentRecord from './pages/TreatmentRecord';
 import MedicineRecord from './pages/MedicineRecord';
 import MortalityRecord from './pages/MortalityRecord';
 import SaleRecord from './pages/SaleRecord';
-import CashBookRecord from './pages/CashBookRecord';
-import ReportsRecord from './pages/ReportsRecord';
+import Settings from './pages/Settings';
 
 // View Placeholder wrapped in our high-fidelity MainLayout
 const ViewPlaceholder = ({ title }) => (
@@ -46,6 +45,8 @@ const ViewPlaceholder = ({ title }) => (
   </MainLayout>
 );
 
+import Dashboard from './pages/Dashboard';
+
 // App Routing System
 export default function App() {
   const { initSession } = useAuthStore();
@@ -63,7 +64,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         
         {/* Core Sidebar Modules */}
-        <Route path="/" element={<ProtectedRoute><ViewPlaceholder title="Dashboard Overview" /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/growers" element={<ProtectedRoute><GrowerRecord /></ProtectedRoute>} />
         <Route path="/growers/:id" element={<ProtectedRoute><GrowerDetailPage /></ProtectedRoute>} />
         <Route path="/sows" element={<ProtectedRoute><SowRecord /></ProtectedRoute>} />
@@ -82,9 +83,7 @@ export default function App() {
         <Route path="/medicine" element={<ProtectedRoute><MedicineRecord /></ProtectedRoute>} />
         <Route path="/mortality" element={<ProtectedRoute><MortalityRecord /></ProtectedRoute>} />
         <Route path="/sales" element={<ProtectedRoute><SaleRecord /></ProtectedRoute>} />
-        <Route path="/cashbook" element={<ProtectedRoute><CashBookRecord /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute><ReportsRecord /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><ViewPlaceholder title="System Settings" /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         {/* Fallback Catch-all Route */}
         <Route path="*" element={<Navigate to="/" replace />} />

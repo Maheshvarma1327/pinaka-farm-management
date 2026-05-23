@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useSowStore } from './useSowStore';
 import { useBoarStore } from './useBoarStore';
+import { useSettingsStore } from './useSettingsStore';
 
 const MOCK_SEED_BREEDINGS = [
   {
@@ -122,12 +123,11 @@ export const useBreedingStore = create((set, get) => ({
       const serviceDateStr = breedingData.serviceDate || new Date().toISOString().split('T')[0];
       
       // Calculations
-      // Pregnancy Check Date = Service Date + 21 Days
-      const serviceDateObj = new Date(serviceDateStr);
-      const pregCheckDate = new Date(serviceDateObj.getTime() + (21 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+      // Pregnancy Check Date = Service Date + Pregnancy Confirmation Period
+      const pregCheckDate = useSettingsStore.getState().calculateDate(serviceDateStr, 'pregnancyConfirmation').split('T')[0];
       
-      // Expected Farrowing Date = Service Date + 114 Days
-      const estFarrowingDate = new Date(serviceDateObj.getTime() + (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+      // Expected Farrowing Date = Service Date + Gestation
+      const estFarrowingDate = useSettingsStore.getState().calculateDate(serviceDateStr, 'gestation').split('T')[0];
 
       const newRecord = {
         _id: `br_${Date.now()}`,

@@ -8,8 +8,9 @@ import DataTable from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import Modal from '../components/ui/Modal';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
-import { TableSkeleton } from '../components/ui/LoadingSkeleton';
-import { Plus, Eye, Edit, Trash2, Scale, Calendar, ClipboardList, Database, Award } from 'lucide-react';
+import AnimalSelect from '../components/ui/AnimalSelect';
+import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
+import { Plus, Eye, Edit, Trash2, Scale, Calendar, ClipboardList, Database, Award, Skull } from 'lucide-react';
 
 export default function GrowerRecord() {
   const navigate = useNavigate();
@@ -36,6 +37,15 @@ export default function GrowerRecord() {
   const [isPromoteOpen, setIsPromoteOpen] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [promotionRemarks, setPromotionRemarks] = useState('Promoted and imported from Grower module records due to breeding maturity.');
+
+  const [isMortalityOpen, setIsMortalityOpen] = useState(false);
+  const [mortalityAnimal, setMortalityAnimal] = useState(null);
+  const [mortalityForm, setMortalityForm] = useState({
+    causeOfDeath: 'Disease',
+    postmortemFindings: '',
+    notes: '',
+    deathDate: new Date().toISOString().split('T')[0]
+  });
 
   // 2. Form payload states
   const [formData, setFormData] = useState({
@@ -160,6 +170,37 @@ export default function GrowerRecord() {
     setIsPromoteOpen(true);
   };
 
+  const handleOpenMortality = (animal) => {
+    setMortalityAnimal(animal);
+    setMortalityForm({
+      causeOfDeath: 'Disease',
+      postmortemFindings: '',
+      notes: '',
+      deathDate: new Date().toISOString().split('T')[0]
+    });
+    setIsMortalityOpen(true);
+  };
+
+  const handleMortalitySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const { useMortalityStore } = await import('../store/useMortalityStore');
+      const recordMortality = useMortalityStore.getState().recordMortality;
+      await recordMortality({
+        animalId: mortalityAnimal.animalNo,
+        causeOfDeath: mortalityForm.causeOfDeath,
+        postmortemFindings: mortalityForm.postmortemFindings,
+        notes: mortalityForm.notes,
+        deathDate: mortalityForm.deathDate,
+        recordedBy: user?.name || 'System'
+      });
+      setIsMortalityOpen(false);
+      fetchGrowers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   // 6. Submit Actions
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -199,6 +240,12 @@ export default function GrowerRecord() {
   const handleStatusChange = async (e) => {
     e.preventDefault();
     setFormError('');
+
+    if (statusData.status === 'Dead') {
+      setIsStatusOpen(false);
+      handleOpenMortality(selectedAnimal);
+      return;
+    }
 
     try {
       if (statusData.status === 'Promoted to Sow') {
@@ -290,6 +337,7 @@ export default function GrowerRecord() {
         <span 
           className="font-extrabold text-primary select-all cursor-pointer hover:underline" 
           onClick={() => navigate(`/growers/${row._id}`)}
+          title={row.originPigletId || row.originalPigletId ? `Origin Piglet ID: ${row.originPigletId || row.originalPigletId}` : undefined}
         >
           {val}
         </span>
@@ -332,11 +380,36 @@ export default function GrowerRecord() {
       sortable: true,
       render: (val) => <span className="font-semibold text-textPrimary bg-sidebar border border-borderDark px-2 py-0.5 rounded">{val}</span>
     },
+    {
+      header: "Origin",
+      accessor: "lifecycleSource",
+      sortable: true,
+      render: (val, row) => {
+        if (val === 'Farrowing Promotion' && row.originPigletId) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] uppercase font-black text-warning bg-warning/10 px-1.5 py-0.5 rounded w-fit">
+                Farrowing
+              </span>
+              <span className="text-[10px] font-mono text-textSecondary">{row.originPigletId}</span>
+            </div>
+          );
+        }
+        return <span className="text-[10px] text-textSecondary">{val || 'Direct Entry'}</span>;
+      }
+    },
     { 
       header: "Status", 
       accessor: "status", 
       sortable: true,
-      render: (val) => <StatusBadge status={val} /> 
+      render: (val, row) => (
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={val} />
+          {val === 'Dead' && (
+            <Skull className="w-3.5 h-3.5 text-danger shrink-0 animate-pulse" title="Animal deceased — lifecycle closed" />
+          )}
+        </div>
+      )
     },
     {
       header: "Actions",
@@ -355,15 +428,17 @@ export default function GrowerRecord() {
             <>
               <button 
                 onClick={() => handleOpenUpdateWeight(row)}
-                className="p-1 hover:bg-cardBg hover:text-primary rounded text-textSecondary"
-                title="Update Weight"
+                className={`p-1 hover:bg-cardBg hover:text-primary rounded text-textSecondary ${row.status === 'Dead' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                disabled={row.status === 'Dead'}
+                title={row.status === 'Dead' ? "Animal deceased — lifecycle closed" : "Update Weight"}
               >
                 <Scale className="w-3.5 h-3.5" />
               </button>
               <button 
                 onClick={() => handleOpenStatus(row)}
-                className="p-1 hover:bg-cardBg hover:text-success rounded text-textSecondary"
-                title="Transition status state"
+                className={`p-1 hover:bg-cardBg hover:text-success rounded text-textSecondary ${row.status === 'Dead' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                disabled={row.status === 'Dead'}
+                title={row.status === 'Dead' ? "Animal deceased — lifecycle closed" : "Transition status state"}
               >
                 <ClipboardList className="w-3.5 h-3.5" />
               </button>
@@ -378,8 +453,9 @@ export default function GrowerRecord() {
               )}
               <button 
                 onClick={() => handleOpenEdit(row)}
-                className="p-1 hover:bg-cardBg hover:text-yellow-500 rounded text-textSecondary"
-                title="Edit core details"
+                className={`p-1 hover:bg-cardBg hover:text-yellow-500 rounded text-textSecondary ${row.status === 'Dead' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                disabled={row.status === 'Dead'}
+                title={row.status === 'Dead' ? "Animal deceased — lifecycle closed" : "Edit core details"}
               >
                 <Edit className="w-3.5 h-3.5" />
               </button>
@@ -520,12 +596,22 @@ export default function GrowerRecord() {
             <FormSection title="Livestock Identity">
               <FormGrid cols={2}>
                 <FormField label="Animal No / Tag ID" required>
-                  <input
-                     type="text"
-                     placeholder="e.g. G-203"
+                  <AnimalSelect
                      value={formData.animalNo}
-                     onChange={(e) => setFormData({ ...formData, animalNo: e.target.value })}
-                     className="dense-input"
+                     onChange={(val) => setFormData({ ...formData, animalNo: val })}
+                     onSelectFull={(animal) => {
+                       setFormData(prev => ({
+                         ...prev,
+                         animalNo: animal.animalNo,
+                         breed: animal.breed || prev.breed,
+                         dob: animal.dob ? animal.dob.split('T')[0] : prev.dob,
+                         sex: animal.sex || prev.sex,
+                         birthWeight: animal.currentWeight || animal.birthWeight || prev.birthWeight,
+                         penNo: animal.currentPen || prev.penNo
+                       }));
+                     }}
+                     filterByStage="Grower"
+                     required
                   />
                 </FormField>
                 <FormField label="Breed" required>
@@ -960,6 +1046,95 @@ export default function GrowerRecord() {
                   Promoting updates this grower's operational status to "Promoted to {selectedAnimal?.sex === 'Female' ? 'Sow' : 'Boar'}", registers a new active {selectedAnimal?.sex === 'Female' ? 'Sow' : 'Boar'} Card, copies over history, and redirects you automatically.
                 </span>
               </div>
+            </FormSection>
+          </form>
+        </Modal>
+
+        {/* ==============================================
+            MODAL 6: RECORD MORTALITY CONFIRMATION
+            ============================================== */}
+        <Modal
+          isOpen={isMortalityOpen}
+          onClose={() => setIsMortalityOpen(false)}
+          title={`Record Mortality — Grower ${mortalityAnimal?.animalNo}`}
+          icon={<Skull className="w-5 h-5 text-danger" />}
+          footer={
+            <>
+              <button 
+                onClick={() => setIsMortalityOpen(false)}
+                className="px-4 py-2 hover:bg-cardBg border border-borderDark text-textSecondary text-xs rounded uppercase font-bold"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleMortalitySubmit}
+                className="px-4 py-2 bg-danger hover:bg-danger/80 text-white text-xs rounded uppercase font-bold shadow-md"
+              >
+                Record Mortality
+              </button>
+            </>
+          }
+        >
+          <form onSubmit={handleMortalitySubmit} className="flex flex-col gap-4 text-xs">
+            <FormSection title="Deceased Grower Logistics">
+              <FormGrid cols={2}>
+                <FormField label="Animal ID">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed font-mono font-bold text-primary" value={mortalityAnimal?.animalNo || ''} readOnly />
+                </FormField>
+                <FormField label="Breed">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed" value={mortalityAnimal?.breed || ''} readOnly />
+                </FormField>
+              </FormGrid>
+              <FormGrid cols={3}>
+                <FormField label="Sex">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed" value={mortalityAnimal?.sex || ''} readOnly />
+                </FormField>
+                <FormField label="Lifecycle Stage">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed" value="Grower" readOnly />
+                </FormField>
+                <FormField label="Current Pen / Location">
+                  <input type="text" className="dense-input bg-cardBg opacity-60 cursor-not-allowed font-mono text-[10.5px]" value={mortalityAnimal?.penNo || ''} readOnly />
+                </FormField>
+              </FormGrid>
+            </FormSection>
+            
+            <FormSection title="Clinical Mortality Details">
+              <FormGrid cols={2}>
+                <FormField label="Cause Of Death" required>
+                  <select
+                    value={mortalityForm.causeOfDeath}
+                    onChange={(e) => setMortalityForm({ ...mortalityForm, causeOfDeath: e.target.value })}
+                    className="dense-select"
+                  >
+                    {['Disease', 'Respiratory Failure', 'Infection', 'Accident', 'Weak Birth', 'Injury', 'Unknown', 'Natural Causes', 'Euthanasia'].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Date Of Death" required>
+                  <DatePicker
+                    value={mortalityForm.deathDate}
+                    onChange={(val) => setMortalityForm({ ...mortalityForm, deathDate: val })}
+                  />
+                </FormField>
+              </FormGrid>
+              <FormField label="Postmortem Findings" required>
+                <input
+                  type="text"
+                  placeholder="e.g. Lungs congested, heart lesions"
+                  value={mortalityForm.postmortemFindings}
+                  onChange={(e) => setMortalityForm({ ...mortalityForm, postmortemFindings: e.target.value })}
+                  className="dense-input"
+                  required
+                />
+              </FormField>
+              <FormField label="Additional Description / Notes">
+                <textarea
+                  rows={2}
+                  placeholder="Enter any other specific observations regarding clinical treatment history or timeline..."
+                  value={mortalityForm.notes}
+                  onChange={(e) => setMortalityForm({ ...mortalityForm, notes: e.target.value })}
+                  className="dense-input w-full p-2"
+                />
+              </FormField>
             </FormSection>
           </form>
         </Modal>
