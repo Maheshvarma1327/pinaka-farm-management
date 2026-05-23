@@ -763,8 +763,9 @@ export default function SowRecord() {
                      className="dense-select"
                   >
                     <option value="Active">Active (Open)</option>
-                    <option value="In Heat">In Heat</option>
-                    <option value="Pregnant">Pregnant</option>
+                    <option value="In Heat">Heat</option>
+                    <option value="Pregnancy Pending">Mating</option>
+                    <option value="Pregnant">Pregnancy</option>
                     <option value="Lactating">Lactating</option>
                     <option value="Under Treatment">Under Treatment</option>
                   </select>
@@ -937,9 +938,9 @@ export default function SowRecord() {
                      className="dense-select"
                   >
                     <option value="Active">Active (Open)</option>
-                    <option value="In Heat">In Heat</option>
-                    <option value="Pregnancy Pending">Pregnancy Pending</option>
-                    <option value="Pregnant">Pregnant</option>
+                    <option value="In Heat">Heat</option>
+                    <option value="Pregnancy Pending">Mating</option>
+                    <option value="Pregnant">Pregnancy</option>
                     <option value="Lactating">Lactating</option>
                     <option value="Under Treatment">Under Treatment</option>
                     <option value="Culled">Culled</option>

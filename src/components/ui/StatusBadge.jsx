@@ -9,6 +9,7 @@ export default function StatusBadge({ status }) {
   const normalized = status.trim().toUpperCase();
 
   let badgeClass = "badge-secondary";
+  let displayName = status;
   
   switch (normalized) {
     // Active / Success States
@@ -24,6 +25,7 @@ export default function StatusBadge({ status }) {
     // Warning / Pending States
     case 'PENDING':
     case 'PREGNANT':
+    case 'PREGNANCY':
     case 'LACTATING':
     case 'INSEMINATION':
     case 'ARTIFICIAL INSEMINATION':
@@ -31,7 +33,11 @@ export default function StatusBadge({ status }) {
     case 'UNDER OBSERVATION':
     case 'LOW STOCK':
     case 'RECOVERING':
+    case 'IN HEAT':
+    case 'HEAT':
       badgeClass = "badge-warning";
+      if (normalized === 'IN HEAT' || normalized === 'HEAT') displayName = 'Heat';
+      if (normalized === 'PREGNANT' || normalized === 'PREGNANCY') displayName = 'Pregnancy';
       break;
 
     // Danger / Alert States
@@ -63,7 +69,13 @@ export default function StatusBadge({ status }) {
     case 'DEWORMER':
     case 'VITAMIN':
     case 'OTHER':
+    case 'PREGNANCY PENDING':
+    case 'PENDING CONFIRMATION':
+    case 'MATING':
       badgeClass = "badge-info";
+      if (normalized === 'PREGNANCY PENDING' || normalized === 'PENDING CONFIRMATION' || normalized === 'MATING') {
+        displayName = 'Mating';
+      }
       break;
       
     case 'EXPENSE':
@@ -72,7 +84,6 @@ export default function StatusBadge({ status }) {
     case 'PROMOTED TO SOW':
     case 'PROMOTED TO BOAR':
     case 'RETIRED':
-    case 'RECOVERED':
       badgeClass = "badge-secondary";
       break;
 
@@ -82,7 +93,7 @@ export default function StatusBadge({ status }) {
 
   return (
     <span className={badgeClass}>
-      {status}
+      {displayName}
     </span>
   );
 }
