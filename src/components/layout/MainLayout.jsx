@@ -102,7 +102,7 @@ export default function MainLayout({ children }) {
       groupName: 'Health Management',
       items: [
         { name: 'Treatment Register', path: '/treatment', icon: Stethoscope },
-        { name: 'Medicine & Vaccine Inventory', path: '/medicine', icon: Pill },
+        { name: 'Medicine & Vaccine Record', path: '/medicine', icon: Pill },
         { name: 'Mortality Register', path: '/mortality', icon: Skull }
       ]
     },

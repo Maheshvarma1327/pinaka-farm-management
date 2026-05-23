@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import { useAnimalStore } from '../../../store/useAnimalStore';
-import { useTreatmentStore } from '../../../store/useTreatmentStore';
 import { FormField, FormGrid } from '../../../components/ui/FormLayout';
 import StatusBadge from '../../../components/ui/StatusBadge';
 import { 
@@ -12,27 +11,17 @@ import {
   Tag,
   Calendar,
   Layers,
-  Activity,
-  HeartPulse,
-  Heart
+  Activity
 } from 'lucide-react';
 
 export default function AnimalStockDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { selectedAnimal: animal, loading, fetchAnimalById } = useAnimalStore();
-  const { treatments, fetchTreatments } = useTreatmentStore();
 
   useEffect(() => {
     fetchAnimalById(id);
-    fetchTreatments();
-  }, [id, fetchAnimalById, fetchTreatments]);
-
-  // Query medical treatments for this specific animal profile
-  const animalTreatments = useMemo(() => {
-    if (!animal) return [];
-    return treatments.filter(t => t.animalId.toUpperCase() === animal.animalNo.toUpperCase());
-  }, [treatments, animal]);
+  }, [id, fetchAnimalById]);
 
   if (loading || !animal) {
     return (
@@ -53,8 +42,7 @@ export default function AnimalStockDetailPage() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/stock')}
-              className="p-2 bg-sidebar border border-borderDark rounded hover:bg-cardBg hover:text-primary transition-colors text-textSecondary animate-fade-in"
-              title="Back to Registry"
+              className="p-2 bg-sidebar border border-borderDark rounded hover:bg-cardBg hover:text-primary transition-colors text-textSecondary"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -156,72 +144,27 @@ export default function AnimalStockDetailPage() {
               </h3>
               
               <div className="flex flex-col gap-3">
-                <div className={`p-3 border rounded-lg flex flex-col gap-1.5 transition-all ${animalTreatments.length > 0 ? 'bg-success/5 border-success/20' : 'bg-sidebar border-borderDark opacity-50'}`}>
+                <div className="p-3 bg-sidebar border border-borderDark rounded-lg flex flex-col gap-1.5 opacity-50">
                   <span className="text-[10px] font-bold text-textSecondary uppercase tracking-widest">Health History</span>
-                  <span className="text-xs text-textPrimary font-semibold">
-                    {animalTreatments.length > 0 ? `${animalTreatments.length} cases registered` : 'No treatments active'}
-                  </span>
+                  <span className="text-xs text-textPrimary font-semibold">No treatments active</span>
                 </div>
                 
                 {animal.lifecycleStage === 'Sow' && (
                   <div className="p-3 bg-blueAccent/10 border border-blueAccent/20 rounded-lg flex flex-col gap-1.5">
                     <span className="text-[10px] font-bold text-blueAccent uppercase tracking-widest">Breeding Link</span>
-                    <span className="text-xs text-textPrimary font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/sows/${animal.animalNo}`)}>View Sow Profile</span>
+                    <span className="text-xs text-textPrimary font-semibold cursor-pointer hover:underline">View Sow Profile</span>
                   </div>
                 )}
                 
                 {animal.lifecycleStage === 'Boar' && (
                   <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg flex flex-col gap-1.5">
                     <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Breeding Link</span>
-                    <span className="text-xs text-textPrimary font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/boars/${animal.animalNo}`)}>View Boar Profile</span>
+                    <span className="text-xs text-textPrimary font-semibold cursor-pointer hover:underline">View Boar Profile</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Clinical Medical History Section */}
-        <div className="op-card p-6">
-          <h3 className="text-sm font-black text-primary uppercase tracking-widest border-l-2 border-primary pl-2 mb-6 flex items-center gap-2">
-            <Heart className="w-4.5 h-4.5 text-primary shrink-0" /> Clinical Medical History
-          </h3>
-          {animalTreatments.length === 0 ? (
-            <div className="py-8 text-center text-xs text-textSecondary bg-cardBg/30 border border-borderDark/45 rounded-xl">
-              No historical treatments, medicine administrations, or clinical cases registered for this patient.
-            </div>
-          ) : (
-            <div className="overflow-x-auto border border-borderDark/45 rounded-xl">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="bg-cardBg border-b border-borderDark text-textSecondary font-bold">
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Treatment ID</th>
-                    <th className="p-3">Type</th>
-                    <th className="p-3">Diagnosis</th>
-                    <th className="p-3">Prescribed Medicine</th>
-                    <th className="p-3">Dosage / Route</th>
-                    <th className="p-3">Recovery Status</th>
-                    <th className="p-3">Attending Vet</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {animalTreatments.map((t, idx) => (
-                    <tr key={idx} className="border-b border-borderDark/40 hover:bg-cardBg/40 text-textSecondary">
-                      <td className="p-3 font-bold text-textPrimary">{t.startDate ? new Date(t.startDate).toLocaleDateString() : 'N/A'}</td>
-                      <td className="p-3 font-mono font-bold text-primary">{t.treatmentId}</td>
-                      <td className="p-3"><StatusBadge status={t.treatmentType || 'Medicine'} /></td>
-                      <td className="p-3 font-bold text-warning">{t.diagnosis}</td>
-                      <td className="p-3 font-extrabold text-textPrimary">{t.medicineName || '—'}</td>
-                      <td className="p-3 font-mono text-textPrimary">{t.doseQuantity ? `${t.doseQuantity} ${t.doseUnit || 'ml'} (${t.administrationRoute || 'IM'})` : '—'}</td>
-                      <td className="p-3"><StatusBadge status={t.recoveryStatus} /></td>
-                      <td className="p-3">{t.vetName || 'In-house'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
       </div>
