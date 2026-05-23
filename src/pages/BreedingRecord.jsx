@@ -55,11 +55,17 @@ export default function BreedingRecord() {
 
   // Eligible animals for form
   const eligibleSows = useMemo(() => {
-    return sows.filter(s => s.status === 'In Heat' && s.pregnancyStatus !== 'Pregnant');
+    return sows.filter(s => (s.status === 'In Heat' || s.status === 'Heat') && s.pregnancyStatus !== 'Pregnant');
   }, [sows]);
 
   const eligibleBoars = useMemo(() => {
-    return boars.filter(b => b.breedingStatus === 'Breeding Ready' || b.breedingStatus === 'Breeding Active');
+    return boars.filter(b => 
+      b.breedingStatus === 'Breeding Ready' || 
+      b.breedingStatus === 'Breeding Active' || 
+      b.breedingStatus === 'Mating' || 
+      b.status === 'Mating' || 
+      b.status === 'Active'
+    );
   }, [boars]);
 
   // Derived calculations for preview
@@ -355,7 +361,7 @@ export default function BreedingRecord() {
                  <AlertTriangle className="w-5 h-5 text-warning mb-1" />
                  <span className="font-bold text-textPrimary">Cannot Register Breeding</span>
                  <span className="text-[11px] text-textSecondary">
-                   Ensure you have at least one Sow with status "In Heat" and one Boar with status "Breeding Ready/Active".
+                   Ensure you have at least one Sow in "Heat" (or "In Heat") and one Boar set to "Mating" (or "Breeding Ready/Active").
                  </span>
                </div>
             ) : (

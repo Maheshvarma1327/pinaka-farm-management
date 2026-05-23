@@ -628,6 +628,17 @@ export const useBoarStore = create((set, get) => ({
           const previousStatus = updated.status;
           updated.status = status;
           
+          // Align internal breedingStatus depending on the target status
+          if (status === 'Mating') {
+            updated.breedingStatus = 'Breeding Active';
+          } else if (status === 'Active') {
+            if (updated.breedingStatus !== 'Breeding Active') {
+              updated.breedingStatus = 'Breeding Ready';
+            }
+          } else if (status === 'Culled' || status === 'Dead' || status === 'Inactive') {
+            updated.breedingStatus = 'Retired';
+          }
+
           updated.statusHistory = [
             ...(updated.statusHistory || []),
             {

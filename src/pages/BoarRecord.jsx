@@ -249,15 +249,20 @@ export default function BoarRecord() {
       'Puberty Reached': 'text-primary bg-primary/10 border-primary/20',
       'Breeding Ready': 'text-success bg-success/10 border-success/20',
       'Breeding Active': 'text-success bg-success/15 border-success/30 font-black animate-pulse',
+      'Mating': 'text-success bg-success/15 border-success/30 font-black animate-pulse',
       'Low Fertility': 'text-warning bg-warning/10 border-warning/20',
       'Under Treatment': 'text-danger bg-danger/10 border-danger/20',
       'Retired': 'text-textSecondary bg-sidebar border-borderDark/60',
       'Sold': 'text-textSecondary bg-sidebar border-borderDark/60',
       'Dead': 'text-danger bg-danger/5 border-danger/10 line-through'
     };
+    
+    let display = status;
+    if (status === 'Breeding Active') display = 'Mating';
+    
     return (
       <span className={`text-[10px] px-2.5 py-0.5 rounded border font-bold uppercase tracking-wider ${map[status] || 'text-textSecondary bg-sidebar'}`}>
-        {status}
+        {display}
       </span>
     );
   };
@@ -652,7 +657,7 @@ export default function BoarRecord() {
                     <option value="Growing">Growing</option>
                     <option value="Puberty Reached">Puberty Reached</option>
                     <option value="Breeding Ready">Breeding Ready</option>
-                    <option value="Breeding Active">Breeding Active</option>
+                    <option value="Breeding Active">Mating</option>
                     <option value="Low Fertility">Low Fertility</option>
                     <option value="Under Treatment">Under Treatment</option>
                     <option value="Retired">Retired</option>
@@ -840,6 +845,7 @@ export default function BoarRecord() {
                     className="dense-select"
                   >
                     <option value="Active">Active</option>
+                    <option value="Mating">Mating</option>
                     <option value="Under Treatment">Under Treatment</option>
                     <option value="Inactive">Inactive</option>
                     <option value="Culled">Culled</option>
