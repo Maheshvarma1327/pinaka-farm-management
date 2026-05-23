@@ -85,9 +85,9 @@ export default function MainLayout({ children }) {
       groupName: 'Animal Management',
       items: [
         { name: 'Animal Stock Register', path: '/stock', icon: Database },
+        { name: 'Grower Record Card', path: '/growers', icon: ClipboardList },
         { name: 'Sow Record Card', path: '/sows', icon: HeartPulse },
-        { name: 'Boar Record Card', path: '/boars', icon: Zap },
-        { name: 'Grower Record Card', path: '/growers', icon: ClipboardList }
+        { name: 'Boar Record Card', path: '/boars', icon: Zap }
       ]
     },
     {
