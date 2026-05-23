@@ -6,16 +6,21 @@ const MOCK_TREATMENTS = [
     treatmentId: "TRT-001",
     animalId: "S-101",
     animalType: "Sow",
+    treatmentType: "Medicine",
     symptoms: "High fever, lethargy",
     diagnosis: "MMA (Mastitis, Metritis, Agalactia)",
     treatmentDetails: "Administered broad-spectrum antibiotics and anti-inflammatory",
+    medicineId: "med_1",
+    medicineName: "Penicillin G",
+    doseQuantity: "10",
+    doseUnit: "ml",
+    frequency: "Once daily",
+    duration: "3 days",
+    administrationRoute: "Intramuscular",
     vetName: "Dr. Alistair",
-    startDate: "2026-05-18T00:00:00.000Z",
-    followUpDate: "2026-05-21T00:00:00.000Z",
+    startDate: "2026-05-18",
+    followUpDate: "2026-05-21",
     recoveryStatus: "Recovering",
-    medicinesUsed: [
-      { medicineId: "MED-001", medicineName: "Penicillin G", dose: "10ml" }
-    ],
     operator: "Dr. Alistair",
     notes: "Sow is responding well to treatment. Milk flow is returning.",
     createdAt: "2026-05-18T10:00:00.000Z",
@@ -59,6 +64,14 @@ export const useTreatmentStore = create((set, get) => ({
   registerTreatment: async (data) => {
     set({ loading: true, error: null });
     try {
+      // Sync: Deduct stock from Medicine Store first
+      // This will throw an error if expired or insufficient stock, halting registration
+      if (data.medicineId && data.doseQuantity) {
+        const { useMedicineStore } = await import('./useMedicineStore');
+        const medStore = useMedicineStore.getState();
+        await medStore.deductStock(data.medicineId, data.doseQuantity);
+      }
+
       const list = loadLocalTreatments();
       const newRecord = {
         _id: `trt_${Date.now()}`,
@@ -70,18 +83,6 @@ export const useTreatmentStore = create((set, get) => ({
 
       const updatedList = [newRecord, ...list];
       saveLocalTreatments(updatedList);
-
-      // Sync: Deduct stock from Medicine Store
-      if (data.medicineId && data.doseQuantity) {
-        try {
-          const { useMedicineStore } = await import('./useMedicineStore');
-          const medStore = useMedicineStore.getState();
-          await medStore.deductStock(data.medicineId, data.doseQuantity);
-        } catch (err) {
-          console.error("Failed to deduct medicine stock:", err);
-        }
-      }
-
       set({ treatments: updatedList, loading: false });
       return newRecord;
     } catch (err) {
