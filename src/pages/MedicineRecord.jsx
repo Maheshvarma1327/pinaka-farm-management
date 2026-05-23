@@ -2,23 +2,29 @@ import React, { useEffect, useMemo, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useMedicineStore } from '../store/useMedicineStore';
 import { useTreatmentStore } from '../store/useTreatmentStore';
+import { useAnimalStore } from '../store/useAnimalStore';
 import DataTable from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import { TableSkeleton, CardSkeleton } from '../components/ui/LoadingSkeleton';
 import Modal from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
 import { FormField, FormGrid, FormSection } from '../components/ui/FormLayout';
-import { Pill, Plus, Package, AlertTriangle, Syringe, CheckCircle, Edit, Archive, Trash2, History, Info } from 'lucide-react';
+import { Pill, Plus, Package, AlertTriangle, Syringe, CheckCircle, Edit, Archive, Trash2, History, Info, Activity, User } from 'lucide-react';
 
 export default function MedicineRecord() {
   const { medicines, loading, fetchMedicines, registerMedicine, updateMedicine, archiveMedicine, deleteExpiredMedicine } = useMedicineStore();
-  const { treatments, fetchTreatments } = useTreatmentStore();
+  const { treatments, loading: treatmentsLoading, fetchTreatments, registerTreatment } = useTreatmentStore();
+  const { animals, fetchAnimals } = useAnimalStore();
+  
+  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' or 'administrations'
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isGiveModalOpen, setIsGiveModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   
   const [selectedMed, setSelectedMed] = useState(null);
+  const [selectedGiveMed, setSelectedGiveMed] = useState(null);
   const [selectedMedHistoryItem, setSelectedMedHistoryItem] = useState(null);
   
   const [showArchived, setShowArchived] = useState(false);
@@ -29,15 +35,28 @@ export default function MedicineRecord() {
     totalQuantity: '', unit: 'ml', minimumStockThreshold: '', purchaseCost: '', storageLocation: '', notes: ''
   });
 
+  const [giveFormData, setGiveFormData] = useState({
+    animalId: '', animalType: '', lifecycleStage: '', currentPen: '', currentStatus: '',
+    doseQuantity: '', administrationRoute: 'Intramuscular', diagnosis: '', symptoms: '',
+    notes: '', administeredBy: 'Dr. Alistair', administrationDate: new Date().toISOString().split('T')[0],
+    followUpDate: '', followUpStatus: 'Pending'
+  });
+
   useEffect(() => { 
     fetchMedicines(); 
     fetchTreatments();
-  }, [fetchMedicines, fetchTreatments]);
+    fetchAnimals();
+  }, [fetchMedicines, fetchTreatments, fetchAnimals]);
 
   // Filter medicines by archive status
   const displayedMedicines = useMemo(() => {
     return medicines.filter(m => showArchived ? m.isArchived : !m.isArchived);
   }, [medicines, showArchived]);
+
+  // Filter treatments/administrations which utilize registered stock items
+  const medicalAdministrations = useMemo(() => {
+    return treatments.filter(t => t.medicineId || t.treatmentType === 'Vaccine' || t.treatmentType === 'Medicine');
+  }, [treatments]);
 
   const kpis = useMemo(() => {
     const active = medicines.filter(m => !m.isArchived);
@@ -58,6 +77,29 @@ export default function MedicineRecord() {
       t.medicineName?.toLowerCase() === selectedMedHistoryItem.name?.toLowerCase()
     );
   }, [treatments, selectedMedHistoryItem]);
+
+  const handleAnimalSelect = (id) => {
+    const matched = animals.find(a => a.animalNo === id || a._id === id);
+    if (matched) {
+      setGiveFormData(prev => ({
+        ...prev,
+        animalId: matched.animalNo,
+        animalType: matched.lifecycleStage === 'Piglet' ? 'Piglet' : (matched.lifecycleStage === 'Grower' ? 'Grower' : (matched.sex === 'Female' ? 'Sow' : 'Boar')),
+        lifecycleStage: matched.lifecycleStage,
+        currentPen: matched.currentPen || 'Unassigned',
+        currentStatus: matched.operationalStatus
+      }));
+    } else {
+      setGiveFormData(prev => ({
+        ...prev,
+        animalId: id,
+        animalType: '',
+        lifecycleStage: '',
+        currentPen: '',
+        currentStatus: ''
+      }));
+    }
+  };
 
   const columns = useMemo(() => [
     {
@@ -109,45 +151,114 @@ export default function MedicineRecord() {
     { header: "Status", accessor: "status", render: (val) => <StatusBadge status={val} /> },
     {
       header: "Actions", accessor: "_id",
-      render: (val, row) => (
-        <div className="flex items-center gap-1.5 no-print">
-          <button 
-            onClick={() => handleOpenEditModal(row)} 
-            className="p-1.5 hover:bg-cardHover rounded text-textSecondary hover:text-primary transition-colors"
-            title="Edit Inventory Item"
-          >
-            <Edit className="w-3.5 h-3.5" />
-          </button>
-          <button 
-            onClick={() => {
-              setSelectedMedHistoryItem(row);
-              setIsHistoryModalOpen(true);
-            }} 
-            className="p-1.5 hover:bg-cardHover rounded text-textSecondary hover:text-blueAccent transition-colors"
-            title="View Stock Usage History"
-          >
-            <History className="w-3.5 h-3.5" />
-          </button>
-          <button 
-            onClick={() => handleArchive(row._id)} 
-            className={`p-1.5 hover:bg-cardHover rounded transition-colors ${row.isArchived ? 'text-primary hover:text-textSecondary' : 'text-textSecondary hover:text-warning'}`}
-            title={row.isArchived ? "Restore to Active" : "Archive Inventory Item"}
-          >
-            <Archive className="w-3.5 h-3.5" />
-          </button>
-          {row.status === 'Expired' && (
+      render: (val, row) => {
+        const isExpired = row.status === 'Expired';
+        return (
+          <div className="flex items-center gap-1.5 no-print">
             <button 
-              onClick={() => handleDeleteExpired(row._id)} 
-              className="p-1.5 hover:bg-cardHover rounded text-textSecondary hover:text-danger transition-colors"
-              title="Delete Expired Stock Batch"
+              onClick={() => {
+                if (isExpired) return;
+                setSelectedGiveMed(row);
+                setGiveFormData(prev => ({
+                  ...prev,
+                  doseQuantity: '',
+                  doseUnit: row.unit,
+                  animalId: '', animalType: '', lifecycleStage: '', currentPen: '', currentStatus: ''
+                }));
+                setIsGiveModalOpen(true);
+              }}
+              disabled={isExpired}
+              className={`p-1.5 rounded transition-all ${isExpired ? 'opacity-30 cursor-not-allowed text-textMuted' : 'hover:bg-cardHover text-primary hover:scale-105'}`}
+              title={isExpired ? "Expired Stock Batch (Disabled)" : "Give Medicine / Vaccine"}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Syringe className="w-3.5 h-3.5" />
             </button>
-          )}
+            <button 
+              onClick={() => handleOpenEditModal(row)} 
+              className="p-1.5 hover:bg-cardHover rounded text-textSecondary hover:text-primary transition-colors"
+              title="Edit Inventory Item"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => {
+                setSelectedMedHistoryItem(row);
+                setIsHistoryModalOpen(true);
+              }} 
+              className="p-1.5 hover:bg-cardHover rounded text-textSecondary hover:text-blueAccent transition-colors"
+              title="View Stock Usage History"
+            >
+              <History className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => handleArchive(row._id)} 
+              className={`p-1.5 hover:bg-cardHover rounded transition-colors ${row.isArchived ? 'text-primary hover:text-textSecondary' : 'text-textSecondary hover:text-warning'}`}
+              title={row.isArchived ? "Restore to Active" : "Archive Inventory Item"}
+            >
+              <Archive className="w-3.5 h-3.5" />
+            </button>
+            {isExpired && (
+              <button 
+                onClick={() => handleDeleteExpired(row._id)} 
+                className="p-1.5 hover:bg-cardHover rounded text-textSecondary hover:text-danger transition-colors"
+                title="Delete Expired Stock Batch"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      }
+    }
+  ], [animals]);
+
+  // Administration History columns
+  const adminColumns = useMemo(() => [
+    {
+      header: "Admin ID", accessor: "treatmentId", sortable: true,
+      render: (val, row) => <span className="font-extrabold text-primary font-mono text-[11px]">{val || row._id.slice(-6).toUpperCase()}</span>
+    },
+    {
+      header: "Animal ID", accessor: "animalId", sortable: true,
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-bold text-textPrimary text-[11px]">{val}</span>
+          <span className="text-[9px] text-textSecondary font-bold">{row.animalType}</span>
         </div>
       )
+    },
+    {
+      header: "Medicine / Vaccine", accessor: "medicineName", sortable: true,
+      render: (val, row) => {
+        const batch = medicines.find(m => m._id === row.medicineId || m.medicineId === row.medicineId)?.batchNumber || '—';
+        return (
+          <div className="flex flex-col">
+            <span className="font-extrabold text-[11px] text-textPrimary">{val || 'Treatment Item'}</span>
+            <span className="text-[9px] text-textMuted font-mono">Batch: {batch}</span>
+          </div>
+        );
+      }
+    },
+    {
+      header: "Dose Quantity", accessor: "doseQuantity",
+      render: (val, row) => <span className="font-bold text-textPrimary">{val} {row.doseUnit || 'ml'}</span>
+    },
+    { header: "Route", accessor: "administrationRoute", render: (val) => <span className="text-[11px] text-textSecondary">{val || 'Intramuscular'}</span> },
+    { header: "Diagnosis / Symptoms", accessor: "diagnosis", render: (val, row) => <span className="text-[11px] text-warning font-bold">{val} <span className="text-[10px] font-normal text-textMuted">({row.symptoms || 'Routine'})</span></span> },
+    { header: "Administered By", accessor: "vetName", render: (val) => <span className="text-[11px] text-textSecondary">{val || 'Vet'}</span> },
+    {
+      header: "Date", accessor: "startDate", sortable: true,
+      render: (val) => <span className="text-[11px] font-bold text-textPrimary">{val ? new Date(val).toLocaleDateString() : 'N/A'}</span>
+    },
+    {
+      header: "Follow-Up Status", accessor: "followUpStatus",
+      render: (val, row) => {
+        const isPast = row.followUpDate && new Date(row.followUpDate) < new Date();
+        const displayVal = val || (isPast ? 'Missed' : 'Pending');
+        return <StatusBadge status={displayVal} />;
+      }
     }
-  ], [treatments]);
+  ], [medicines]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -166,6 +277,65 @@ export default function MedicineRecord() {
       setSelectedMed(null);
       resetForm();
     } catch (err) { alert(err.message); }
+  };
+
+  const handleGiveSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedGiveMed) return;
+
+    // Safety checks
+    if (selectedGiveMed.status === 'Expired' || (selectedGiveMed.expiryDate && new Date(selectedGiveMed.expiryDate) < new Date())) {
+      alert("Error: Cannot administer because this batch has EXPIRED.");
+      return;
+    }
+
+    const qty = Number(giveFormData.doseQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      alert("Error: Please enter a valid dosage quantity.");
+      return;
+    }
+
+    if (qty > selectedGiveMed.remainingStock) {
+      alert(`Error: Insufficient stock. Requested ${qty} ${selectedGiveMed.unit}, but only ${selectedGiveMed.remainingStock} ${selectedGiveMed.unit} is available.`);
+      return;
+    }
+
+    if (!giveFormData.animalId) {
+      alert("Error: Please select a valid patient animal from the registry.");
+      return;
+    }
+
+    try {
+      // Connect to useTreatmentStore to register treatment, deduct stock and audit log
+      await registerTreatment({
+        animalId: giveFormData.animalId,
+        animalType: giveFormData.animalType || 'Grower',
+        treatmentType: selectedGiveMed.type === 'Vaccine' ? 'Vaccine' : 'Medicine',
+        symptoms: giveFormData.symptoms || 'Routine administration',
+        diagnosis: giveFormData.diagnosis || 'Routine stock application',
+        treatmentDetails: giveFormData.notes || `Administered ${selectedGiveMed.name} batch ${selectedGiveMed.batchNumber}`,
+        vetName: giveFormData.administeredBy,
+        startDate: giveFormData.administrationDate,
+        followUpDate: giveFormData.followUpDate,
+        recoveryStatus: giveFormData.followUpStatus === 'Recovering' ? 'Recovering' : 'Under Observation',
+        medicineId: selectedGiveMed._id,
+        doseQuantity: giveFormData.doseQuantity,
+        doseUnit: selectedGiveMed.unit,
+        frequency: 'Single application',
+        duration: '1 day',
+        administrationRoute: giveFormData.administrationRoute,
+        notes: giveFormData.notes,
+        followUpStatus: giveFormData.followUpStatus
+      });
+
+      // Reload lists
+      await fetchMedicines();
+      await fetchTreatments();
+      setIsGiveModalOpen(false);
+      alert(`Success: Administered ${qty} ${selectedGiveMed.unit} of ${selectedGiveMed.name} to animal ${giveFormData.animalId}. Stock has been deducted.`);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleArchive = async (id) => {
@@ -215,6 +385,8 @@ export default function MedicineRecord() {
   return (
     <MainLayout>
       <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-10">
+        
+        {/* Top Title Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-black text-textPrimary uppercase tracking-widest flex items-center gap-2">
@@ -237,6 +409,7 @@ export default function MedicineRecord() {
           </div>
         </div>
 
+        {/* KPIs */}
         {loading && medicines.length === 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4"><CardSkeleton /><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
         ) : (
@@ -260,17 +433,43 @@ export default function MedicineRecord() {
           </div>
         )}
 
-        <div className="op-card border border-borderDark rounded-xl overflow-hidden">
-          {loading && medicines.length === 0 ? <TableSkeleton rows={5} cols={9} /> : (
-            <DataTable columns={columns} data={displayedMedicines} searchPlaceholder="Search inventory by name, batch, supplier, location..." />
-          )}
+        {/* Dynamic Dual-Tab Module Navigation */}
+        <div className="flex border-b border-borderDark gap-2 no-print">
+          <button 
+            onClick={() => setActiveTab('inventory')}
+            className={`px-5 py-2.5 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'inventory' ? 'border-primary text-primary' : 'border-transparent text-textSecondary hover:text-textPrimary'}`}
+          >
+            Stock Inventory Catalog
+          </button>
+          <button 
+            onClick={() => setActiveTab('administrations')}
+            className={`px-5 py-2.5 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'administrations' ? 'border-primary text-primary' : 'border-transparent text-textSecondary hover:text-textPrimary'}`}
+          >
+            Clinical Administration History
+          </button>
         </div>
+
+        {/* Tab Contents */}
+        {activeTab === 'inventory' ? (
+          <div className="op-card border border-borderDark rounded-xl overflow-hidden">
+            {loading && medicines.length === 0 ? <TableSkeleton rows={5} cols={10} /> : (
+              <DataTable columns={columns} data={displayedMedicines} searchPlaceholder="Search inventory by name, batch, supplier, location..." />
+            )}
+          </div>
+        ) : (
+          <div className="op-card border border-borderDark rounded-xl overflow-hidden">
+            {treatmentsLoading ? <TableSkeleton rows={5} cols={9} /> : (
+              <DataTable columns={adminColumns} data={medicalAdministrations} searchPlaceholder="Search dosage logs by Animal ID, Vet, Medicine batch, Diagnosis..." />
+            )}
+          </div>
+        )}
+
       </div>
 
-      {/* ADD MODAL */}
+      {/* ADD INVENTORY MODAL */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add Stock to Medicine Inventory" icon={<Pill className="w-5 h-5 text-primary" />}>
         <form onSubmit={handleAdd} className="flex flex-col gap-5 p-1">
-          <FormSection title="Medical Specifications">
+          <FormSection title="Item Details">
             <FormGrid cols={2}>
               <FormField label="Medicine / Vaccine Name" required id="name">
                 <input id="name" type="text" required className="input-field" placeholder="e.g. Penicillin G" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
@@ -330,7 +529,7 @@ export default function MedicineRecord() {
         </form>
       </Modal>
 
-      {/* EDIT MODAL */}
+      {/* EDIT INVENTORY MODAL */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Modify Inventory Item Specs" icon={<Pill className="w-5 h-5 text-primary" />}>
         <form onSubmit={handleEdit} className="flex flex-col gap-5 p-1">
           <FormSection title="Medical Specifications">
@@ -393,7 +592,168 @@ export default function MedicineRecord() {
         </form>
       </Modal>
 
-      {/* HISTORY USAGE MODAL */}
+      {/* GIVE MEDICINE / VACCINE ADMINISTRATION MODAL */}
+      <Modal isOpen={isGiveModalOpen} onClose={() => setIsGiveModalOpen(false)} title={`Medicine Administration Sheet: ${selectedGiveMed?.name || ''}`} icon={<Syringe className="w-5 h-5 text-primary" />}>
+        <form onSubmit={handleGiveSubmit} className="flex flex-col gap-5 p-1 max-h-[75vh] overflow-y-auto pr-2">
+          
+          <FormSection title="Section 1 — Patient Animal Information">
+            <FormGrid cols={2}>
+              <FormField label="Select Patient Animal (ID)" required id="give_animalId">
+                <select
+                  id="give_animalId"
+                  className="input-field font-mono"
+                  value={giveFormData.animalId}
+                  onChange={e => handleAnimalSelect(e.target.value)}
+                  required
+                >
+                  <option value="">-- Choose Animal ID --</option>
+                  {animals.map(a => (
+                    <option key={a._id} value={a.animalNo}>
+                      {a.animalNo} ({a.lifecycleStage} | Pen: {a.currentPen || 'Unassigned'})
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormGrid cols={2}>
+                <FormField label="Animal Type">
+                  <input type="text" readOnly className="input-field opacity-60 font-bold" value={giveFormData.animalType || 'Auto'} />
+                </FormField>
+                <FormField label="Lifecycle Stage">
+                  <input type="text" readOnly className="input-field opacity-60 font-bold font-mono" value={giveFormData.lifecycleStage || 'Auto'} />
+                </FormField>
+              </FormGrid>
+            </FormGrid>
+            <FormGrid cols={2}>
+              <FormField label="Current Pen Location">
+                <input type="text" readOnly className="input-field opacity-60 font-bold" value={giveFormData.currentPen || 'Auto'} />
+              </FormField>
+              <FormField label="Patient Current Status">
+                <input type="text" readOnly className="input-field opacity-60 font-bold" value={giveFormData.currentStatus || 'Auto'} />
+              </FormField>
+            </FormGrid>
+          </FormSection>
+
+          <FormSection title="Section 2 — Medicine / Vaccine Batch Info">
+            <FormGrid cols={3}>
+              <FormField label="Item Name">
+                <input type="text" readOnly className="input-field opacity-60 font-bold text-textPrimary" value={selectedGiveMed?.name || ''} />
+              </FormField>
+              <FormField label="Inventory Batch Number">
+                <input type="text" readOnly className="input-field opacity-60 font-mono font-bold text-textPrimary" value={selectedGiveMed?.batchNumber || ''} />
+              </FormField>
+              <FormField label="Location Storage Location">
+                <input type="text" readOnly className="input-field opacity-60 font-bold" value={selectedGiveMed?.storageLocation || 'N/A'} />
+              </FormField>
+            </FormGrid>
+            <FormGrid cols={3}>
+              <FormField label="Available Remaining Stock">
+                <input type="text" readOnly className="input-field opacity-60 font-bold text-success" value={`${selectedGiveMed?.remainingStock || 0} ${selectedGiveMed?.unit || ''}`} />
+              </FormField>
+              <FormField label="Expiration Safeguard Date">
+                <input type="text" readOnly className={`input-field opacity-60 font-bold ${selectedGiveMed?.status === 'Expired' ? 'text-danger' : 'text-textPrimary'}`} value={selectedGiveMed?.expiryDate ? new Date(selectedGiveMed.expiryDate).toLocaleDateString() : 'N/A'} />
+              </FormField>
+              <FormField label="Measurement Dosage Unit">
+                <input type="text" readOnly className="input-field opacity-60 font-bold" value={selectedGiveMed?.unit || ''} />
+              </FormField>
+            </FormGrid>
+          </FormSection>
+
+          <FormSection title="Section 3 — Clinical Administration Specs">
+            <FormGrid cols={3}>
+              <FormField label={`Dose Quantity (${selectedGiveMed?.unit || ''})`} required id="give_doseQuantity">
+                <input
+                  id="give_doseQuantity"
+                  type="number"
+                  min="0.1"
+                  step="any"
+                  className="input-field font-bold text-textPrimary"
+                  placeholder="e.g. 5"
+                  value={giveFormData.doseQuantity}
+                  onChange={e => setGiveFormData({ ...giveFormData, doseQuantity: e.target.value })}
+                  required
+                />
+              </FormField>
+              <FormField label="Route of Administration" required id="give_route">
+                <select 
+                  id="give_route" 
+                  className="input-field" 
+                  value={giveFormData.administrationRoute} 
+                  onChange={e => setGiveFormData({ ...giveFormData, administrationRoute: e.target.value })}
+                >
+                  {['Intramuscular', 'Intravenous', 'Oral', 'Injection', 'Topical'].map(r => <option key={r}>{r}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Follow-Up Condition Status" required id="give_status">
+                <select 
+                  id="give_status" 
+                  className="input-field font-bold" 
+                  value={giveFormData.followUpStatus} 
+                  onChange={e => setGiveFormData({ ...giveFormData, followUpStatus: e.target.value })}
+                >
+                  {['Pending', 'Completed', 'Missed', 'Recovering'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </FormField>
+            </FormGrid>
+
+            <FormGrid cols={3}>
+              <FormField label="Purpose / Clinical Diagnosis" required id="give_diagnosis">
+                <input 
+                  id="give_diagnosis" 
+                  type="text" 
+                  required 
+                  className="input-field" 
+                  placeholder="e.g. Fever, MMA prevention" 
+                  value={giveFormData.diagnosis} 
+                  onChange={e => setGiveFormData({ ...giveFormData, diagnosis: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Attending Vet / Operator" required id="give_administeredBy">
+                <input 
+                  id="give_administeredBy" 
+                  type="text" 
+                  required 
+                  className="input-field" 
+                  placeholder="Vet name" 
+                  value={giveFormData.administeredBy} 
+                  onChange={e => setGiveFormData({ ...giveFormData, administeredBy: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Administration Date" required id="give_date">
+                <DatePicker value={giveFormData.administrationDate} onChange={date => setGiveFormData({ ...giveFormData, administrationDate: date })} required className="input-field" />
+              </FormField>
+            </FormGrid>
+
+            <FormGrid cols={2}>
+              <FormField label="Observed Patient Symptoms" id="give_symptoms">
+                <input 
+                  id="give_symptoms" 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Describe observed symptoms (e.g. high heat, lethargy)" 
+                  value={giveFormData.symptoms} 
+                  onChange={e => setGiveFormData({ ...giveFormData, symptoms: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Follow-Up Check Date (Optional)" id="give_followUpDate">
+                <DatePicker value={giveFormData.followUpDate} onChange={date => setGiveFormData({ ...giveFormData, followUpDate: date })} placeholder="Select check-up date" className="input-field" />
+              </FormField>
+            </FormGrid>
+
+            <FormField label="Clinical / Veterinary Administration Notes" id="give_notes">
+              <textarea id="give_notes" rows={2} className="input-field resize-none text-[11px]" placeholder="Add post-dosage care parameters or clinical observations..." value={giveFormData.notes} onChange={e => setGiveFormData({ ...giveFormData, notes: e.target.value })} />
+            </FormField>
+          </FormSection>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-borderDark">
+            <button type="button" onClick={() => setIsGiveModalOpen(false)} className="px-4 py-2 text-xs font-bold text-textSecondary hover:text-textPrimary transition-colors">Cancel</button>
+            <button type="submit" className="btn-primary py-2 px-6 flex items-center gap-2">
+              <Syringe className="w-4 h-4" /> Administer Dose
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* STOCK BATCH USAGE HISTORY MODAL */}
       <Modal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} title={`Administration Log: ${selectedMedHistoryItem?.name || ''}`} icon={<History className="w-5 h-5 text-primary" />}>
         <div className="flex flex-col gap-4 p-1 min-w-[300px] md:min-w-[650px]">
           <div className="flex items-center gap-3 bg-surface p-3 border border-borderDark rounded-lg text-xs">
